@@ -1,26 +1,59 @@
 class RestApplication < StickShift::Model
-  attr_accessor :framework, :creation_time, :uuid, :embedded, :aliases, :name, :gear_count, :links, :domain_id, :git_url, :app_url, :ssh_url, :gear_profile, :scalable, :health_check_path, :scale_min, :scale_max, :build_info
-  include LegacyBrokerHelper
+  attr_accessor :framework, :creation_time, :uuid, :embedded, :aliases, :name, :gear_count, :links, :domain_id, :git_url, :app_url, :ssh_url, :building_with, :building_app, :build_job_url
 
   def initialize(app, url, nolinks=false)
-    self.framework = app.framework
+    self.embedded = []
+    app.requires(true).each do |feature|
+      cart = CartridgeCache.find_cartridge(feature)
+      if cart.categories.include? "web_framework"
+        self.framework = feature
+      else
+        self.embedded << feature
+      end
+    end
+
     self.name = app.name
-    self.creation_time = app.creation_time
-    self.uuid = app.uuid
-    self.aliases = app.aliases || Array.new
-    self.gear_count = (app.gears.nil?) ? 0 : app.gears.length
-    self.embedded = app.embedded
+    self.creation_time = app.created_at
+    self.uuid = app._id.to_s
+    self.aliases = app.aliases
+    self.gear_count = app.num_gears
     self.domain_id = app.domain.namespace
+
     self.gear_profile = app.node_profile
     self.scalable = app.scalable
     self.scale_min,self.scale_max = app.scaling_limits
-    self.git_url = "ssh://#{@uuid}@#{@name}-#{@domain_id}.#{Rails.configuration.ss[:domain_suffix]}/~/git/#{@name}.git/"
-    self.app_url = "http://#{@name}-#{@domain_id}.#{Rails.configuration.ss[:domain_suffix]}/"
-    self.ssh_url = "ssh://#{@uuid}@#{@name}-#{@domain_id}.#{Rails.configuration.ss[:domain_suffix]}"
+
+    self.git_url = "ssh://#{app.ssh_uri}/~/git/#{@name}.git/"
+    self.app_url = "http://#{app.fqdn}/"
+    self.ssh_url = "ssh://#{app.ssh_uri}"
+
     self.health_check_path = app.health_check_path
     self.build_info = RestBuildInfo.new(app)
     cart_type = "embedded"
     cache_key = "cart_list_#{cart_type}"
+
+    self.building_with = nil
+    self.building_app = nil
+    self.build_job_url = nil
+
+    app.component_instances.each do |component_instance|
+      cart = CartridgeCache::find_cartridge(component_instance.cartridge_name)
+      if cart.categories.include?("ci_builder")
+        self.building_with = cart.name
+        self.build_job_url = component_instance.properties["job_url"]
+        break
+      end
+    end
+
+    app.domain.applications.each do |domain_app|
+      domain_app.component_instance.each do |component_instance|
+        cart = CartridgeCache::find_cartridge(component_instance.cartridge_name)
+        if cart.categories.include?("ci")
+          self.building_app = user_app.name
+          break
+        end
+      end
+    end
 
     unless nolinks
       carts = nil
