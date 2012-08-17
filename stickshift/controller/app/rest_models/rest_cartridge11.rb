@@ -1,37 +1,11 @@
 class RestCartridge11 < StickShift::Model
-  attr_accessor :type, :name, :version, :display_name, :description, :license, :license_url,
-                :tags, :website, :help_topics, :links, :properties, :scaling_info, :status_messages
 
-  def initialize(type, name, app, url, status_messages, nolinks=false)
-    self.name = name
-    self.type = type
+  attr_accessor :type, :name, :version, :license, :license_url, :tags, :website, :suggests, :requires, :conflicts, :provides,
+  :help_topics, :links, :properties, :display_name, :description, :scales_with, :status_messages
+
+  def initialize(type, cart, app, cinst, url, nolinks=false)
+    self.name = cart.name
     self.status_messages = status_messages
-    prop_values = nil
-    self.scaling_info = nil
-    cart = CartridgeCache.find_cartridge(name)
-    if app
-      if cart.categories.include? "web_framework"
-        app.comp_instance_map.each { |cname, cinst|
-          next if cinst.parent_cart_name!=name
-          prop_values = cinst.cart_properties
-          break
-        }
-      else
-        prop_values = app.embedded[name] 
-      end
-      app.group_instance_map.each { |gi_name,gi|
-        ci = gi.component_instances.find { |ci_name| 
-          cinst = app.comp_instance_map[ci_name]
-          cinst.parent_cart_name==name 
-        }
-        if ci
-          self.scaling_info = RestScalingInfo.new(gi, cart)
-          break
-        end
-      }
-    else
-      self.scaling_info = RestScalingInfo.new(nil, cart)
-    end
     self.version = cart.version
     self.display_name = cart.display_name
     self.description = cart.description
@@ -39,13 +13,18 @@ class RestCartridge11 < StickShift::Model
     self.license_url = cart.license_url
     self.tags = cart.categories
     self.website = cart.website
-    # self.suggests = cart.suggests_feature
-    # self.requires = cart.requires_feature
-    # self.depends = cart.profiles.map { |p| p.components.map { |c| c.depends_service }.flatten }.flatten.uniq
-    # self.conflicts = cart.conflicts_feature
+    self.suggests = cart.suggests
+    self.requires = cart.requires
+    self.conflicts = cart.conflicts
+    if app.nil?
+      self.provides = cart.features
+    else
+      self.provides = app.get_feature(cinst.cartridge_name, cinst.component_name)
+    end
     self.help_topics = cart.help_topics
-    
+
     self.properties = []
+    prop_values = cinst.component_properties
     cart.cart_data_def.each do |data_def|
       property = {}
       property["name"] = data_def["Key"]
@@ -53,6 +32,15 @@ class RestCartridge11 < StickShift::Model
       property["description"] = data_def["Description"]
       property["value"] = prop_values[data_def["Key"]] unless prop_values.nil? or prop_values[data_def["Key"]].nil?
       self.properties << property
+    end
+
+    self.scales_with = nil
+    app.component_instances.each do |component_instance|
+      cart = CartridgeCache::find_cartridge(component_instance.cartridge_name)
+      if cart.categories.include?("scales")
+        self.scales_with = component_instance.cartridge_name
+        break
+      end
     end
 
     if app and !nolinks
