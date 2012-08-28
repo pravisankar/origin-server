@@ -21,6 +21,10 @@ class ComponentInstance
     get_component.is_singleton?
   end
 
+  def group_instance
+    self.application.group_instances.find(self.group_instance_id)
+  end
+
   # Helper method called by {Application#process_commands} to process component hook output and extract the component_properties
   def process_properties(result_io)
     # @todo
