@@ -29,17 +29,22 @@ Suggests:
   - 10gen-mms-agent-0.1
   - rockmongo
 Provides:
-  - mongodb
-  - mongodb-basic-mode
-Components:
-  mongod:
-    Publishes:
-      publish-nosql-db-connection-info:
-        Type: "NET_TCP:nosqldb:connection-info"
-      get-db-connection-info:
-        Type: "NET_TCP:db:connection-info"
-      get-mongo-connection-info:
-        Type: "NET_TCP:db:mongodb"
-    Scaling:
-      Min: 1
-      Max: 1
+  - "mongodb-2.0"
+  - "mongodb"
+  - "mongodb(version) = 2.0.0"
+Profiles:
+  basic:
+    Provides: mongodb-basic-mode
+    Components:
+      mongod:
+        Publishes:
+          publish-nosql-db-connection-info:
+            Type: "NET_TCP:nosqldb:connection-info"
+          get-db-connection-info:
+            Type: "NET_TCP:db:connection-info"
+          get-mongo-connection-info:
+            Type: "NET_TCP:db:mongodb"
+        Scaling:
+          Min: 1
+          Max: 1
+Default-Profile: basic
