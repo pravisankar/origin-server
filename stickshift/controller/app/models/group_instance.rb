@@ -23,8 +23,9 @@ class GroupInstance
   field :max, type: Integer, default: -1
   field :user_min, type: Integer, default: 1
   field :user_max, type: Integer, default: -1
-  
+
   field :gear_size, type: String, default: "small"
+  field :addtl_fs_gb, type: Integer, default: 0
   embeds_many :gears, class_name: Gear.name
   
   # Initializes the application
@@ -95,7 +96,7 @@ class GroupInstance
     comps = all_component_instances.map{ |c| c.to_hash }
     {component_instances: comps, scale: {min: self.min, max: self.max, user_min: self.user_min, user_max: self.user_max, current: self.gears.length}, _id: _id}
   end
-  
+
   protected
   
   # Run an operation on a list of gears on this group instance.
@@ -115,9 +116,9 @@ class GroupInstance
   #
   # == Returns:
   # successful runs::
-  #   List of gears where the operation was succesful. Each entry is a Hash :gear -> {Gear}, :return -> exitcode of the operation
+  #   List of gears where the operation was successful. Each entry is a Hash :gear -> {Gear}, :return -> exitcode of the operation
   # failed_runs::
-  #   List of gears where the operation was not succesful. Each entry is a Hash :gear -> {Gear}, :exception -> exception raised by the operation
+  #   List of gears where the operation was not successful. Each entry is a Hash :gear -> {Gear}, :exception -> exception raised by the operation
   #
   # == Raises:
   # {Exception} if a gear operation fails and fail_fast is true
