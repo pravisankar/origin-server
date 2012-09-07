@@ -56,7 +56,7 @@ def build_rpm(specs, rpmdir, test_build=true)
       sh "cd #{dir} && tito build --test --rpm -o #{rpmdir} #{spec_file} 2>&1"
     end
   else
-    sh "mock -r fedora-16-x86_64 --resultdir=#{rpmdir}/noarch #{rpmdir}/*.src.rpm"
+    sh "mock -r fedora-17-x86_64 --resultdir=#{rpmdir}/noarch #{rpmdir}/*.src.rpm"
   end
 end
 

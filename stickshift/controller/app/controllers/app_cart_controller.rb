@@ -15,7 +15,13 @@ class AppCartController < BaseController
     
     begin
       application = Application.find_by(domain: domain, name: id)
-      cartridges = application.component_instances.map{ |c| RestCartridge11.new(nil,CartridgeCache.find_cartridge(c.cartridge_name),application,c,get_url,nolinks) }
+      cartridges = application.component_instances.map do |comp_inst|
+        if $requested_api_version >= 1.1
+          RestCartridge11.new(CartridgeCache.find_cartridge(comp_inst.cartridge_name), application, comp_inst, get_url, nolinks)
+        else
+          RestCartridge10.new(CartridgeCache.find_cartridge(comp_inst.cartridge_name), application, get_url, nolinks)
+        end
+      end
       render_success(:ok, "cartridges", cartridges, "LIST_APP_CARTRIDGES", "Listing cartridges for application #{id} under domain #{domain_id}")
     rescue Mongoid::Errors::DocumentNotFound
       return render_error(:not_found, "Application '#{id}' not found for domain '#{domain_id}'", 101, "LIST_APP_CARTRIDGES")
@@ -36,9 +42,13 @@ class AppCartController < BaseController
     
     begin
       application = Application.find_by(domain: domain, name: application_id)
-      comp = application.component_instances.find_by(cartridge_name: id)
-      cartridge = RestCartridge11.new(nil,CartridgeCache.find_cartridge(comp.cartridge_name),application,comp,get_url,nolinks)
-      
+      comp_inst = application.component_instances.find_by(cartridge_name: id)
+
+      if $requested_api_version >= 1.1
+        cartridge = RestCartridge11.new(CartridgeCache.find_cartridge(comp_inst.cartridge_name), application, comp_inst, get_url, nolinks)
+      else
+        cartridge = RestCartridge10.new(CartridgeCache.find_cartridge(comp_inst.cartridge_name), application, get_url, nolinks)
+      end
       return render_success(:ok, "cartridge", cartridge, "SHOW_APP_CARTRIDGE", "Showing cartridge #{id} for application #{application_id} under domain #{domain_id}")
     rescue Mongoid::Errors::DocumentNotFound
       return render_error(:not_found, "Application '#{application_id}' not found for domain '#{domain_id}'", 101, "SHOW_APP_CARTRIDGE")
@@ -73,8 +83,12 @@ class AppCartController < BaseController
       application.add_features([name])
       
       cart_name = CartridgeCache.find_cartridge(name).name
-      comp = application.component_instances.find_by(cartridge_name: cart_name)
-      cartridge = RestCartridge11.new(nil,CartridgeCache.find_cartridge(comp.cartridge_name),application,comp,get_url,nolinks)
+      comp_inst = application.component_instances.find_by(cartridge_name: cart_name)
+      if $requested_api_version >= 1.1
+        cartridge = RestCartridge11.new(CartridgeCache.find_cartridge(comp_inst.cartridge_name), application, comp_inst, get_url, nolinks)
+      else
+        cartridge = RestCartridge10.new(CartridgeCache.find_cartridge(comp_inst.cartridge_name), application, get_url, nolinks)
+      end
       return render_success(:created, "cartridge", cartridge, "EMBED_CARTRIDGE", nil, nil, nil, nil)
     rescue StickShift::UserException => e
       return render_error(:bad_request, "Invalid cartridge. #{e.message}", 109, "EMBED_CARTRIDGE", "cartridge")

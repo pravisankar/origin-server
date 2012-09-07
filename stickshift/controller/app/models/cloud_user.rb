@@ -19,7 +19,7 @@
 class CloudUser
   include Mongoid::Document
   include Mongoid::Timestamps
-  
+
   DEFAULT_SSH_KEY_NAME = "default"
 
   field :login, type: String
@@ -32,6 +32,7 @@ class CloudUser
   field :consumed_gears, type: Integer, default: 0
   embeds_many :ssh_keys, class_name: SshKey.name
   embeds_many :pending_ops, class_name: PendingUserOps.name
+  has_many :domains, class_name: Domain.name, dependent: :restrict
   
   validates :login, presence: true, login: true
   validates :capabilities, presence: true, capabilities: true
@@ -54,7 +55,23 @@ class CloudUser
   def auth_method
     @auth_method
   end
-  
+ 
+  def domains
+    Domain.where(owner: self) + Domain.where(user_ids: self._id)
+  end
+
+  # Return user capabilities. Subaccount user may inherit capabilities from its parent.
+  def capabilities
+    user_capabilities = self.attributes["capabilities"]
+    if self.parent_user_id && CloudUser.where(_id: self.parent_user_id).exists?
+      parent_user = CloudUser.find_by(_id: self.parent_user_id)
+      parent_user.capabilities['inherit_on_subaccounts'].each do |cap|
+        user_capabilities[cap] = parent_user.capabilities[cap] if parent_user.capabilities[cap]
+      end if parent_user && parent_user.capabilities.has_key?('inherit_on_subaccounts')
+    end
+    user_capabilities
+  end
+ 
   # Convinience method to get the max_gears capability
   def max_gears
     self.capabilities["max_gears"]
@@ -63,7 +80,7 @@ class CloudUser
   # Used to add an ssh-key to the user. Use this instead of ssh_keys= so that the key can be propogated to the
   # domains/application that the user has access to.
   def add_ssh_key(key)
-    domains = Domain.where(owner: self) + Domain.where(user_ids: self._id)
+    domains = self.domains
     if domains.count > 0
       pending_op = PendingUserOps.new(op_type: :add_ssh_key, arguments: key.attributes.dup, state: :init, on_domain_ids: domains.map{|d|d._id.to_s}, created_at: Time.new)
       CloudUser.where(_id: self.id).update_all({ "$push" => { pending_ops: pending_op.serializable_hash , ssh_keys: key.serializable_hash }})
@@ -85,7 +102,7 @@ class CloudUser
   # domains/application that the user has access to.
   def remove_ssh_key(name)
     key = self.ssh_keys.find_by(name: name)
-    domains = Domain.where(owner: self) + Domain.where(user_ids: self._id)
+    domains = self.domains
     if domains.count > 0
       pending_op = PendingUserOps.new(op_type: :delete_ssh_key, arguments: key.attributes.dup, state: :init, on_domain_ids: domains.map{|d|d._id.to_s}, created_at: Time.new)
       CloudUser.where(_id: self.id).update_all({ "$push" => { pending_ops: pending_op.serializable_hash } , "$pull" => { ssh_keys: key.serializable_hash }})
@@ -96,11 +113,7 @@ class CloudUser
     end
     self
   end
-  
-  def domains
-    Domain.where(owner: self) + Domain.where(user_ids: self._id)
-  end
-  
+ 
   # Runs all jobs in :init phase and stops at the first failure.
   #
   # == Returns:

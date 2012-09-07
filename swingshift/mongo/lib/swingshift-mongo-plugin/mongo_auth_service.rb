@@ -7,7 +7,7 @@ require 'mongoid'
 module Swingshift
   class MongoAuthService < StickShift::AuthService
 
-    def initialize(auth_info = nil)
+    def initialize(auth_info=nil)
       if auth_info != nil
         # no-op
       elsif defined? Rails
@@ -22,7 +22,7 @@ module Swingshift
       @pubkeyfile   = auth_info[:pubkeyfile]
     end
 
-    def register_user(login,password)
+    def register_user(login, password)
       accnt = UserAccount.new(user: login, password: password)
       accnt.save
     end
