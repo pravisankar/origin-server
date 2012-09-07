@@ -3,7 +3,7 @@ require 'digest/md5'
 class UserAccount
   include Mongoid::Document
   include Mongoid::Timestamps
-    store_in collection: "auth_user"
+  store_in collection: "auth_user"
   
   field :user, type: String
   field :password_hash, type: String

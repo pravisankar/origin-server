@@ -20,7 +20,6 @@ end
 class BaseController < ApplicationController
   respond_to :json, :xml
   before_filter :check_version, :only => :show
-  before_filter :check_nolinks
   API_VERSION = 1.1
   SUPPORTED_API_VERSIONS = [1.0,1.1]
   include UserActionLogger
@@ -101,23 +100,22 @@ class BaseController < ApplicationController
         end
 
         if @parent_user.capabilities.nil? || !@parent_user.capabilities["subaccounts"] == true
-          Rails.logger.debug "#{@parent_user.login} tried to impersinate user but does not have require capability."
+          Rails.logger.debug "#{@parent_user.login} tried to impersinate user but does not have required capability."
           raise StickShift::AccessDeniedException.new "Insufficient privileges to access user #{subuser_name}"
         end
 
-        sub_user = CloudUser.find_by(login: subuser_name)
-        if sub_user && sub_user.parent_user_login != @parent_user.login
+        subuser = CloudUser.find_by(login: subuser_name)
+        if subuser && subuser.parent_user_id != @parent_user._id
           Rails.logger.debug "#{@parent_user.login} tried to impersinate user #{subuser_name} but does not own the subaccount."
           raise StickShift::AccessDeniedException.new "Insufficient privileges to access user #{subuser_name}"
         end
 
-        if sub_user.nil?
+        if subuser.nil?
           Rails.logger.debug "Adding user #{subuser_name} as sub user of #{@parent_user.login} ...inside base_controller"
           @cloud_user = CloudUser.new(login: subuser_name, parent_user_id: @parent_user._id)
-          ###TODO: inherit capabilities?
           @cloud_user.save
         else
-          @cloud_user = sub_user
+          @cloud_user = subuser
         end
       else
         begin
@@ -136,16 +134,6 @@ class BaseController < ApplicationController
     end
   end
 
-  def init_user()
-    begin
-      @cloud_user.save
-    rescue Exception => e
-      cu = CloudUser.find @login
-      raise unless cu && (@cloud_user.parent_user_login == cu.parent_user_login)
-      @cloud_user = cu
-    end
-  end
-  
   def rest_reply_url(*args)
     return "/broker/rest/api"
   end
@@ -158,14 +146,7 @@ class BaseController < ApplicationController
   end
   
   def nolinks
-    ignore_links = params[:nolinks]
-    if ignore_links
-      ignore_links.downcase!
-      return true if ["true", "1"].include?(ignore_links)
-      return false if ["false", "0"].include?(ignore_links)
-      raise StickShift::UserException.new("Invalid value for 'nolinks'. Valid options: [true, false, 1, 0]", 167)
-    end
-    return false
+    get_bool(params[:nolinks])
   end
  
   def check_version
@@ -193,14 +174,6 @@ class BaseController < ApplicationController
       invalid_version = $requested_api_version
       $requested_api_version = API_VERSION
       return render_error(:not_acceptable, "Requested API version #{invalid_version} is not supported. Supported versions are #{SUPPORTED_API_VERSIONS.map{|v| v.to_s}.join(",")}")
-    end
-  end
-
-  def check_nolinks
-    begin
-      nolinks
-    rescue Exception => e
-      return render_exception(e)
     end
   end
 

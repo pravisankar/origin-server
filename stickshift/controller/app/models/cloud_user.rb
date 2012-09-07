@@ -19,6 +19,7 @@
 class CloudUser
   include Mongoid::Document
   include Mongoid::Timestamps
+  Mongoid.raise_not_found_error = false
   
   DEFAULT_SSH_KEY_NAME = "default"
 
@@ -51,7 +52,19 @@ class CloudUser
   def auth_method
     @auth_method
   end
-  
+ 
+  # Return user capabilities. Subaccount user may inherit capabilities from its parent.
+  def capabilities
+    user_capabilities = self.attributes["capabilities"]
+    if self.parent_user_id
+      parent_user = CloudUser.find_by(_id: self.parent_user_id)
+      parent_user.capabilities['inherit_on_subaccounts'].each do |cap|
+        user_capabilities[cap] = parent_user.capabilities[cap] if parent_user.capabilities[cap]
+      end if parent_user && parent_user.capabilities.has_key?('inherit_on_subaccounts')
+    end
+    user_capabilities
+  end
+ 
   # Convinience method to get the max_gears capability
   def max_gears
     self.capabilities["max_gears"]
@@ -98,6 +111,11 @@ class CloudUser
     Domain.where(owner: self) + Domain.where(user_ids: self._id)
   end
   
+  def delete
+    #TODO: Delete user owned domains and applications
+    super
+  end
+
   # Runs all jobs in :init phase and stops at the first failure.
   #
   # == Returns:
