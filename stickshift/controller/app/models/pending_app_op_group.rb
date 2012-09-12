@@ -169,6 +169,11 @@ class PendingAppOpGroup
           when :update_configuration
             gear.update_configuration(op.args,handle)
             use_parallel_job = true
+          when :update_namespace
+            gear.update_namespace(op.args, handle)
+            use_parallel_job = true
+          when :complete_update_namespace
+            component_instance.complete_update_namespace(op.args)
           when :set_connections
             application.set_connections(op.args["connections"])
           when :execute_connections
