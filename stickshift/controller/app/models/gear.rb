@@ -212,7 +212,7 @@ class Gear
   def update_namespace(args, handle)
     old_ns = args["old_namespace"]
     new_ns = args["new_namespace"]
-    cart = args["cart"]
+    cart = args["cartridge"]
 
     dns = StickShift::DnsService.instance
     begin
