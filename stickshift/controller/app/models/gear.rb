@@ -227,5 +227,4 @@ class Gear
     result.append get_proxy.update_namespace(self.app, self, cart, new_ns, old_ns)
     self.app.process_commands(result)
   end
-  end 
 end
