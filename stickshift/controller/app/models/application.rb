@@ -888,7 +888,7 @@ class Application
       args["cartridge"] = "abstract"
       group_instance.gears.each do |gear|
         args["gear_id"] = gear._id.to_s
-        ops.push(PendingAppOp.new(op_type: :update_namespace, args: args.dup, prereq: prereq)
+        ops.push(PendingAppOp.new(op_type: :update_namespace, args: args.dup, prereq: prereq))
       end
     end
     ops
