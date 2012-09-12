@@ -136,10 +136,20 @@ class Application
   #
   # == Returns:
   # {PendingAppOps} object which tracks the progess of the operation.
-  def update_namespace(new_namespace, parent_op=nil)
+  def update_namespace(old_namespace, new_namespace, parent_op=nil)
     Application.run_in_application_lock(self) do
       result_io = ResultIO.new
-      op_group = PendingAppOpGroup.new(op_name: :add_namespace, args: {"new_namespace" => new_namespace}, parent_op: parent_op)
+      op_group = PendingAppOpGroup.new(op_name: :update_namespace, args: {"old_namespace" => old_namespace, "new_namespace" => new_namespace}, parent_op: parent_op)
+      self.pending_op_groups.push op_group
+      self.run_jobs(result_io)
+      result_io
+    end
+  end
+
+  def complete_update_namespace(old_namespace, new_namespace, parent_op=nil)
+    Application.run_in_application_lock(self) do
+      result_io = ResultIO.new
+      op_group = PendingAppOpGroup.new(op_name: :complete_update_namespace, args: {"old_namespace" => old_namespace, "new_namespace" => new_namespace}, parent_op: parent_op)
       self.pending_op_groups.push op_group
       self.run_jobs(result_io)
       result_io
@@ -768,10 +778,12 @@ class Application
         op_group.pending_ops
         if op_group.pending_ops.count == 0
           case op_group.op_type
-          when :add_namespace
-            #todo
-          when :remove_namespace
-            #todo
+          when :update_namespace
+            ops = calculate_namespace_ops(op_group.args)
+            op_group.pending_ops.push(*ops)
+          when :complete_update_namespace
+            ops = calculate_complete_update_ns_ops(op_group.args)
+            op_group.pending_ops.push(*ops)
           when :update_configuration
             ops = calculate_update_existing_configuration_ops(op_group.args)
             op_group.pending_ops.push(*ops)
@@ -849,6 +861,37 @@ class Application
     else
       false
     end
+  end
+
+
+  def calculate_complete_update_ns_ops(args, prereqs={})
+    ops = []
+    last_op = nil
+    old_ns = args["old_namespace"]
+    new_ns = args["new_namespace"]
+    self.group_instances.each do |group_instance|
+      args["group_instance_id"] = group_instance._id.to_s
+      group_instance.all_component_instances.each do |component_instance|
+        args["comp_spec"] = {"comp" => component_instance.component_name, "cart" => component_instance.cartridge_name}
+        last_op = PendingAppOp.new(op_type: :complete_update_namespace, args: args.dup, prereq: last_op)
+      end
+    end
+    ops.push PendingAppOp.new(op_type: :execute_connections, prereq: last_op)
+    # self.domain.namespace = new_ns
+    ops
+  end
+
+  def calculate_namespace_ops(args, prereqs={})
+    ops = []
+    self.group_instances.each do |group_instance|
+      args["group_instance_id"] = group_instance._id.to_s
+      args["cartridge"] = "abstract"
+      group_instance.gears.each do |gear|
+        args["gear_id"] = gear._id.to_s
+        ops.push(PendingAppOp.new(op_type: :update_namespace, args: args.dup, prereq: prereq)
+      end
+    end
+    ops
   end
 
   def update_requirements(features, group_overrides)

@@ -55,11 +55,9 @@ class Domain
   def update_namespace(new_namespace)
     old_ns = namespace
     set(:namespace, new_namespace)
-    pending_op = PendingDomainOps.new(op_type: :update_namespace_add, arguments: {old_ns: old_ns, new_ns: new_namespace}, parent_op: nil, on_apps: applications, on_complete_method: :complete_namespace_update)
+    pending_op = PendingDomainOps.new(op_type: :update_namespace, arguments: {old_ns: old_ns, new_ns: new_namespace}, parent_op: nil, on_apps: applications, on_complete_method: :complete_namespace_update)
     self.pending_ops.push pending_op
-    pending_op.on_apps.each do |app|
-      app.update_namespace(new_namespace, pending_op)
-    end
+    self.run_jobs
     pending_op
   end
 
@@ -74,9 +72,7 @@ class Domain
   def complete_namespace_update(op)
     pending_op = PendingDomainOps.new(op_type: :complete_namespace_update, arguments: {old_ns: old_ns, new_ns: new_namespace}, parent_op: nil, on_apps: op.on_apps)
     self.pending_ops.push pending_op
-    pending_op.on_apps.each do |app|
-      app.remove_namespace(op.arguments[:old_ns], pending_op)
-    end
+    self.run_jobs
     pending_op
   end
   
@@ -225,6 +221,10 @@ class Domain
           op.pending_apps.each { |app| app.add_env_variables(op.arguments["variables"], op) }
         when :remove_env_variables
           op.pending_apps.each { |app| app.remove_env_variables(op.arguments["variables"], op) }
+        when :update_namespace
+          op.on_apps.each { |app| app.update_namespace(op.arguments["old_ns"], op.arguments["new_ns"], op) }
+        when :complete_namespace_update
+          op.on_apps.each { |app| app.complete_update_namespace(op.arguments[:old_ns], op.arguments["new_ns"], op) }
         end
         begin
           self.pending_ops.find_by(_id: op._id, :state.ne => :completed).set(state: :queued)

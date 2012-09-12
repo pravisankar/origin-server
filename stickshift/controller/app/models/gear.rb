@@ -209,4 +209,23 @@ class Gear
     end
   end
 
+  def update_namespace(args, handle)
+    old_ns = args["old_namespace"]
+    new_ns = args["new_namespace"]
+    cart = args["cart"]
+
+    dns = StickShift::DnsService.instance
+    begin
+      dns.deregister_application(self.name, old_ns, public_hostname)
+      dns.register_application(self.name, new_ns, public_hostname)
+      dns.publish
+    ensure
+      dns.close
+    end  
+
+    result = ResultIO.new
+    result.append get_proxy.update_namespace(self.app, self, cart, new_ns, old_ns)
+    self.app.process_commands(result)
+  end
+  end 
 end

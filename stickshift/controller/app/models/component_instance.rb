@@ -43,4 +43,12 @@ class ComponentInstance
   def to_hash
     {"cart" => cartridge_name, "comp" => component_name}
   end
+
+  def complete_update_namespace(args)
+    old_ns = args["old_namespace"]
+    new_ns = args["new_namespace"]
+    component_instance.component_properties.each do |prop_key, prop_value|
+      component_instance.component_properties[prop_key] = prop_value.gsub(/-#{old_ns}.#{Rails.configuration.ss[:domain_suffix]}/, "-#{new_ns}.#{Rails.configuration.ss[:domain_suffix]}")
+    end
+  end
 end
