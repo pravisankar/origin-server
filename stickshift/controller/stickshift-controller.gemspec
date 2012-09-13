@@ -15,7 +15,7 @@ Gem::Specification.new do |s|
   s.summary     = %q{StickShift Controller Rails Engine}
   s.description = %q{StickShift Controller Rails Engine}
 
-  s.files = Dir["{app,config,db,lib}/**/*"] + ["LICENSE", "Rakefile", "README.md", "COPYRIGHT", "stickshift-controller.spec","Gemfile"]
+  s.files = Dir["{app,config,db,lib}/**/*"] + ["LICENSE", "Rakefile", "README.md", "COPYRIGHT", "rubygem-stickshift-controller.spec","Gemfile"]
   s.test_files = Dir["test/**/*"]
   s.executables = Dir[bin_dir].map {|binary| File.basename(binary)}
 
