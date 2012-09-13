@@ -3,7 +3,7 @@ $:.push File.expand_path("../lib", __FILE__)
 lib_dir  = File.join(File.join("lib", "**"), "*")
 test_dir  = File.join(File.join("test", "**"), "*")
 docs_dir  = File.join(File.join("docs", "**"), "*")
-spec_file = "gearchanger-mcollective-plugin.spec"
+spec_file = "rubygem-gearchanger-mcollective-plugin.spec"
 
 Gem::Specification.new do |s|
   s.name        = "gearchanger-mcollective-plugin"
@@ -19,7 +19,7 @@ Gem::Specification.new do |s|
 
   s.files       = Dir[lib_dir] + Dir[docs_dir]
   s.test_files  = Dir[test_dir]
-  s.files       += %w(README.md Rakefile Gemfile gearchanger-mcollective-plugin.spec gearchanger-mcollective-plugin.gemspec LICENSE COPYRIGHT)
+  s.files       += %w(README.md Rakefile Gemfile rubygem-gearchanger-mcollective-plugin.spec gearchanger-mcollective-plugin.gemspec LICENSE COPYRIGHT)
   s.require_paths = ["lib"]
 
   s.add_dependency('stickshift-controller')
