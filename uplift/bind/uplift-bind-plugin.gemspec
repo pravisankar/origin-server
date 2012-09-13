@@ -4,7 +4,7 @@ lib_dir  = File.join(File.join("lib", "**"), "*")
 test_dir  = File.join(File.join("test", "**"), "*")
 bin_dir  = File.join("bin", "*")
 doc_dir  = File.join(File.join("doc", "**"), "*")
-spec_file = "uplift-bind-plugin.spec"
+spec_file = "rubygem-uplift-bind-plugin.spec"
 
 Gem::Specification.new do |s|
   s.name        = "uplift-bind-plugin"
@@ -21,7 +21,7 @@ Gem::Specification.new do |s|
   s.files       = Dir[lib_dir] + Dir[doc_dir]
   s.test_files  = Dir[test_dir]
   s.executables   = Dir[bin_dir]
-  s.files       += %w(README.md Rakefile Gemfile uplift-bind-plugin.spec uplift-bind-plugin.gemspec LICENSE COPYRIGHT)
+  s.files       += %w(README.md Rakefile Gemfile rubygem-uplift-bind-plugin.spec uplift-bind-plugin.gemspec LICENSE COPYRIGHT)
   s.require_paths = ["lib"]
 
   s.add_dependency('stickshift-controller')
