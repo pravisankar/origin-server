@@ -1,10 +1,14 @@
+%if 0%{?fedora}%{?rhel} <= 6
+    %global scl 1
+    %global scl_prefix "ruby193-"
+%endif
 %{!?scl:%global pkg_name %{name}}
 %{?scl:%scl_package rubygem-%{gem_name}}
 %global gem_name stickshift-common
 %global rubyabi 1.9.1
 
 Summary:        Cloud Development Common
-Name:           %{?scl:%scl_prefix}rubygem-%{gem_name}
+Name:           rubygem-%{gem_name}
 Version:        0.15.2
 Release:        1%{?dist}
 Group:          Development/Languages
@@ -23,6 +27,10 @@ Requires:       %{?scl:%scl_prefix}rubygem(activemodel)
 Requires:       %{?scl:%scl_prefix}rubygem(json)
 Requires:       selinux-policy-targeted
 Requires:       policycoreutils-python
+%if 0%{?fedora}%{?rhel} <= 6
+BuildRequires:  ruby193-build
+BuildRequires:  scl-utils-build
+%endif
 BuildRequires:  %{?scl:%scl_prefix}ruby(abi) = %{rubyabi}
 BuildRequires:  %{?scl:%scl_prefix}ruby 
 BuildRequires:  %{?scl:%scl_prefix}rubygems
@@ -30,7 +38,7 @@ BuildRequires:  %{?scl:%scl_prefix}rubygems-devel
 BuildRequires:  selinux-policy-targeted
 BuildRequires:  policycoreutils-python
 BuildArch:      noarch
-Provides:       %{?scl:%scl_prefix}rubygem(%{gem_name}) = %version
+Provides:       rubygem(%{gem_name}) = %version
 
 %package -n ruby-%{gem_name}
 Summary:        Cloud Development Common Library
