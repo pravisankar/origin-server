@@ -1,6 +1,6 @@
 %if 0%{?fedora}%{?rhel} <= 6
-    %global scl 1
-    %global scl_prefix "ruby193-"
+    %global scl ruby193
+    %global scl_prefix ruby193-
 %endif
 %{!?scl:%global pkg_name %{name}}
 %{?scl:%scl_package rubygem-%{gem_name}}
@@ -20,7 +20,7 @@ Source1:        stickshift.fc
 Source2:        stickshift.if
 Source3:        stickshift.te
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
-Requires:       %{?scl:%scl_prefix}ruby(abi) = %{rubyabi}
+#Requires:       %{?scl:%scl_prefix}ruby(abi) = %{rubyabi}
 Requires:       %{?scl:%scl_prefix}ruby
 Requires:       %{?scl:%scl_prefix}rubygems
 Requires:       %{?scl:%scl_prefix}rubygem(activemodel)
@@ -35,6 +35,7 @@ BuildRequires:  %{?scl:%scl_prefix}ruby(abi) = %{rubyabi}
 BuildRequires:  %{?scl:%scl_prefix}ruby 
 BuildRequires:  %{?scl:%scl_prefix}rubygems
 BuildRequires:  %{?scl:%scl_prefix}rubygems-devel
+BuildRequires:  %{?scl:%scl_prefix}rubygem-yard
 BuildRequires:  selinux-policy-targeted
 BuildRequires:  policycoreutils-python
 BuildArch:      noarch
