@@ -1,14 +1,11 @@
+%if 0%{?fedora}%{?rhel} <= 6
+    %global scl ruby193
+    %global scl_prefix ruby193-
+%endif
+%{!?scl:%global pkg_name %{name}}
+%{?scl:%scl_package rubygem-%{gem_name}}
 %global gem_name uplift-bind-plugin
-
-%if 0%{?rhel} <= 6 && 0%{?fedora} <= 16
-
-%global gem_dir %(ruby -rubygems -e 'puts Gem::dir' 2>/dev/null)
-%global gem_instdir %{gem_dir}/gems/%{gem_name}-%{version}
-%global gem_docdir %{gem_dir}/doc/%{gem_name}-%{version}
-%global gem_cache %{gem_dir}/cache/%{gem_name}-%{version}.gem 
-%global gem_spec %{gem_dir}/specifications/%{gem_name}-%{version}.gemspec 
-
-%endif #end rhel <= 6 && fedora <= 16
+%global rubyabi 1.9.1
 
 Summary:        Uplift plugin for BIND service
 Name:           rubygem-%{gem_name}
@@ -19,28 +16,24 @@ License:        ASL 2.0
 URL:            http://openshift.redhat.com
 Source0:        rubygem-%{gem_name}-%{version}.tar.gz
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
-Requires:       ruby(abi) >= 1.9
-Requires:       rubygems
+Requires:       %{?scl:%scl_prefix}ruby(abi) = %{rubyabi}
+Requires:       %{?scl:%scl_prefix}ruby
+Requires:       %{?scl:%scl_prefix}rubygems
+Requires:       %{?scl:%scl_prefix}rubygem(json)
+Requires:       %{?scl:%scl_prefix}rubygem(dnsruby)
 Requires:       rubygem(stickshift-common)
-Requires:       rubygem(json)
 Requires:       bind
 Requires:       bind-utils
-Requires:       rubygem(dnsruby)
 Requires:       stickshift-broker
 Requires:  		selinux-policy-targeted
 Requires:  		policycoreutils-python
-
-%if 0%{?rhel} <= 6 && 0%{?fedora} <= 16
-Requires:       ruby(abi) = 1.8
+%if 0%{?fedora}%{?rhel} <= 6
+BuildRequires:  ruby193-build
+BuildRequires:  scl-utils-build
 %endif
-%if 0%{?fedora} >= 17
-Requires:       ruby(abi) = 1.9.1
-BuildRequires:  rubygems-devel
-%endif
-
-BuildRequires:  ruby
-BuildRequires:  rubygems
-
+BuildRequires:  %{?scl:%scl_prefix}ruby(abi) = %{rubyabi}
+BuildRequires:  %{?scl:%scl_prefix}ruby 
+BuildRequires:  %{?scl:%scl_prefix}rubygems
 BuildArch:      noarch
 
 Provides:       rubygem(%{gem_name}) = %version
@@ -52,11 +45,10 @@ Provides a Bind DNS service based plugin
 %setup -q
 
 %build
+%{?scl:scl enable %scl - << \EOF}
 mkdir -p ./%{gem_dir}
-
 # Create the gem as gem install only works on a gem file
 gem build %{gem_name}.gemspec
-
 export CONFIGURE_ARGS="--with-cflags='%{optflags}'"
 # gem install compiles any C extensions and installs into a directory
 # We set that to be a local directory so that we can move it into the
@@ -68,6 +60,7 @@ gem install -V \
         --force \
         --rdoc \
         %{gem_name}-%{version}.gem
+%{?scl:EOF}
 
 %install
 mkdir -p %{buildroot}%{gem_dir}
@@ -78,8 +71,8 @@ mkdir -p %{buildroot}%{_docdir}/%{name}-%{version}/
 cp -r doc/* %{buildroot}%{_docdir}/%{name}-%{version}/
 
 # Compile SELinux policy
-mkdir -p %{buildroot}%{_prefix}/share/selinux/packages/%{name}
-cp %{buildroot}%{gem_dir}/gems/%{gem_name}-%{version}/doc/examples/dhcpnamedforward.* %{buildroot}%{_prefix}/share/selinux/packages/%{name}/
+mkdir -p %{buildroot}%{_datadir}/selinux/packages/%{name}
+cp %{buildroot}%{gem_dir}/gems/%{gem_name}-%{version}/doc/examples/dhcpnamedforward.* %{buildroot}%{_datadir}/selinux/packages/%{name}/
 
 %post
 
@@ -96,14 +89,14 @@ rm -rf %{buildroot}
 
 %files
 %defattr(-,root,root,-)
-%doc %{_docdir}/%{name}-%{version}
+%doc %{gem_docdir}
 %doc %{gem_instdir}/Gemfile
 %{gem_dir}/doc/%{gem_name}-%{version}
 %{gem_dir}/gems/%{gem_name}-%{version}
-%{gem_dir}/cache/%{gem_name}-%{version}.gem
-%{gem_dir}/specifications/%{gem_name}-%{version}.gemspec
-%dir %{_prefix}/share/selinux/packages/%{name}
-%{_prefix}/share/selinux/packages/%{name}/*
+%{gem_spec}
+%{gem_cache}
+%dir %{_datadir}/share/selinux/packages/%{name}
+%{_datadir}/selinux/packages/%{name}/*
 
 
 %changelog
