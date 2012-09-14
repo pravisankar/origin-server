@@ -76,20 +76,20 @@ cp -a ./%{gem_dir}/* %{buildroot}%{gem_dir}/
 mkdir -p %{buildroot}%{_bindir}
 cp -a ./%{_bindir}/* %{buildroot}%{_bindir}
 
-mkdir -p %{buildroot}%{_sysconfdir}/httpd/conf.d
+mkdir -p %{buildroot}/etc/httpd/conf.d
 mkdir -p %{buildroot}%{appdir}/.httpd.d
-ln -sf %{appdir}/.httpd.d %{buildroot}%{_sysconfdir}/httpd/conf.d/stickshift
+ln -sf %{appdir}/.httpd.d %{buildroot}/etc/httpd/conf.d/stickshift
 
 # Move the gem configs to the standard filesystem location
-mkdir -p %{buildroot}%{_sysconfdir}/stickshift
-mv %{buildroot}%{gem_instdir}/conf/* %{buildroot}%{_sysconfdir}/stickshift
+mkdir -p %{buildroot}/etc/stickshift
+mv %{buildroot}%{gem_instdir}/conf/* %{buildroot}/etc/stickshift
 
 #move the shell binaries into proper location
 mv %{buildroot}%{gem_instdir}/misc/bin/* %{buildroot}%{_bindir}/
 rm -rf %{buildroot}%{gem_instdir}/misc
 
-mv httpd/000001_stickshift_node.conf %{buildroot}%{_sysconfdir}/httpd/conf.d/
-ln -sf %{appdir}/.httpd.d %{buildroot}%{_sysconfdir}/httpd/conf.d/stickshift
+mv httpd/000001_stickshift_node.conf %{buildroot}/etc/httpd/conf.d/
+ln -sf %{appdir}/.httpd.d %{buildroot}/etc/httpd/conf.d/stickshift
 
 %clean
 rm -rf %{buildroot}
@@ -102,10 +102,10 @@ rm -rf %{buildroot}
 %{gem_cache}
 %{gem_spec}
 %{_bindir}/*
-%config(noreplace) %{_sysconfdir}/stickshift
-%config(noreplace) %attr(0750,-,-) %{_sysconfdir}/httpd/conf.d/stickshift
+%config(noreplace) /etc/stickshift
+%config(noreplace) %attr(0750,-,-) /etc/httpd/conf.d/stickshift
 
-%config(noreplace) %{_sysconfdir}/httpd/conf.d/000001_stickshift_node.conf
+%config(noreplace) /etc/httpd/conf.d/000001_stickshift_node.conf
 %attr(0755,-,-) %{_var}/lib/stickshift
 
 %post
