@@ -3,9 +3,9 @@ class RestGearGroup < StickShift::Model
 
   def initialize(group_instance, gear_states = {}, url, nolinks)
     self.id         = group_instance._id.to_s
-    self.gear_profile = group_instance.gear_profile
+    self.gear_profile = group_instance.gear_size
     self.gears        = group_instance.gears.map{ |gear| {:id => gear._id.to_s, :state => gear_states[gear._id.to_s] || 'unknown'} }
-    self.cartridges   = group_instance.resolve_component_instances.map { |c| c.component_properties.merge({:name => c.cartridge_name}) }
+    self.cartridges   = group_instance.all_component_instances.map { |c| c.component_properties.merge({:name => c.cartridge_name}) }
     app = group_instance.application
 
     self.links = {

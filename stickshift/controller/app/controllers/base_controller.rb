@@ -1,22 +1,3 @@
-require 'action_dispatch/http/mime_types'
-module Mime
-  class Type
-    class << self
-      def lookup(string)
-         LOOKUP[string.split(';').first]
-       end
-    end
-  end
-end
-
-class StickShift::Responder < ::ActionController::Responder
-  def api_behavior(error)
-    raise error unless resourceful?
-    status = resource.each{ |r| break(r[:status]) if r.class == Hash && r.has_key?(:status) }
-    display resource[0], status: status
-  end
-end
-
 class BaseController < ApplicationController
   respond_to :json, :xml
   before_filter :check_version, :only => :show

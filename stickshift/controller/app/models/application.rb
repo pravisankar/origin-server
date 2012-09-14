@@ -662,14 +662,14 @@ class Application
     end
     pub_out = {}
     RemoteJob.execute_parallel_jobs(handle)
-    RemoteJob.get_parallel_run_results(handle) do |tag, gear, output, status|
+    RemoteJob.get_parallel_run_results(handle) do |tag, gear_id, output, status|
       if status==0
         if tag.start_with?("expose-ports::")
           component_instance_id = tag[14..-1]
-          self.component_instances.find(component_instance_id).process_properties(output)
+          self.component_instances.find(component_instance_id).process_properties(ResultIO.new(status, output, gear_id))
         else
           pub_out[tag] = [] if pub_out[tag].nil?
-          pub_out[tag].push("'#{gear}'='#{output}'")
+          pub_out[tag].push("'#{gear_id}'='#{output}'")
         end
       end
     end

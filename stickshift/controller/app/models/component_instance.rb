@@ -28,7 +28,18 @@ class ComponentInstance
   
   # Helper method called by {Application#process_commands} to process component hook output and extract the component_properties
   def process_properties(result_io)
-    # @todo
+    unless result_io.properties["component-properties"].nil?
+      result_io.properties["component-properties"].each do |gear_id, properties|
+        self.component_properties = self.component_properties.merge properties
+      end
+      self.save
+    end
+  end
+  
+  def get_feature
+    cart = CartridgeCache.find_cartridge self.cartridge_name
+    prof = cart.get_profile_for_component self.component_name
+    (prof.provides.length > 0 && prof.name != cart.default_profile) ? prof.provides.first : cart.provides.first
   end
   
   def get_cartridge
