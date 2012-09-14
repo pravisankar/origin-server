@@ -4,63 +4,78 @@
 %endif
 %{!?scl:%global pkg_name %{name}}
 %{?scl:%scl_package rubygem-%{gem_name}}
-%global ruby_sitelib %(ruby -rrbconfig -e "puts Config::CONFIG['sitelibdir']")
-%global gemdir %(ruby -rubygems -e 'puts Gem::dir' 2>/dev/null)
-%global gemname swingshift-kerberos-plugin
-%global geminstdir %{gemdir}/gems/%{gemname}-%{version}
+%global gem_name swingshift-kerberos-plugin
+%global rubyabi 1.9.1
 
 Summary:        SwingShift plugin for kerberos auth service
-Name:           rubygem-%{gemname}
+Name:           rubygem-%{gem_name}
 Version:        0.8.7
 Release:        1%{?dist}
 Group:          Development/Languages
 License:        ASL 2.0
 URL:            http://openshift.redhat.com
-Source0:        rubygem-%{gemname}-%{version}.tar.gz
+Source0:        rubygem-%{gem_name}-%{version}.tar.gz
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
-Requires:       ruby(abi) = 1.8
-Requires:       rubygems
+Requires:       %{?scl:%scl_prefix}ruby(abi) = %{rubyabi}
+Requires:       %{?scl:%scl_prefix}ruby
+Requires:       %{?scl:%scl_prefix}rubygems
+Requires:       %{?scl:%scl_prefix}rubygem(json)
+Requires:       %{?scl:%scl_prefix}rubygem(krb5-auth)
+Requires:       %{?scl:%scl_prefix}rubygem(mocha)
 Requires:       rubygem(stickshift-common)
-Requires:       rubygem(json)
-Requires:       rubygem(mocha)
 Requires:       stickshift-broker
 Requires:  		selinux-policy-targeted
 Requires:  		policycoreutils-python
-Requires:       rubygem(krb5-auth)
-
-BuildRequires:  ruby
-BuildRequires:  rubygems
+%if 0%{?fedora}%{?rhel} <= 6
+BuildRequires:  ruby193-build
+BuildRequires:  scl-utils-build
+%endif
+BuildRequires:  %{?scl:%scl_prefix}ruby(abi) = %{rubyabi}
+BuildRequires:  %{?scl:%scl_prefix}ruby 
+BuildRequires:  %{?scl:%scl_prefix}rubygems
+BuildRequires:  %{?scl:%scl_prefix}rubygems-devel
 BuildArch:      noarch
-Provides:       rubygem(%{gemname}) = %version
+Provides:       rubygem(%{gem_name}) = %version
 
-%package -n ruby-%{gemname}
-Summary:        SwingShift plugin for kerberos auth service
-Requires:       rubygem(%{gemname}) = %version
-Provides:       ruby(%{gemname}) = %version
 
 %description
 Provides a kerberos auth service based plugin
 
-%description -n ruby-%{gemname}
-Provides a kerberos auth service based plugin
+%package doc
+Summary:        SwingShift plugin for kerberos auth service documentation
+
+%description doc
+Provides a kerberos auth service based plugin documentation
 
 %prep
 %setup -q
 
 %build
+%{?scl:scl enable %scl - << \EOF}
+mkdir -p .%{gem_dir}
+# Create the gem as gem install only works on a gem file
+gem build %{gem_name}.gemspec
+
+export CONFIGURE_ARGS="--with-cflags='%{optflags}'"
+# gem install compiles any C extensions and installs into a directory
+# We set that to be a local directory so that we can move it into the
+# buildroot in %%install
+gem install -V \
+        --local \
+        --install-dir .%{gem_dir} \
+        --bindir ./%{_bindir} \
+        --force \
+        --rdoc \
+        %{gem_name}-%{version}.gem
+%{?scl:EOF}
 
 %install
-rm -rf %{buildroot}
-mkdir -p %{buildroot}%{gemdir}
-mkdir -p %{buildroot}%{ruby_sitelib}
+mkdir -p %{buildroot}%{gem_dir}
+cp -a .%{gem_dir}/* %{buildroot}%{gem_dir}/
 
-# Build and install into the rubygem structure
-gem build %{gemname}.gemspec
-gem install --local --install-dir %{buildroot}%{gemdir} --force %{gemname}-%{version}.gem
-
-# Symlink into the ruby site library directories
-ln -s %{geminstdir}/lib/%{gemname} %{buildroot}%{ruby_sitelib}
-ln -s %{geminstdir}/lib/%{gemname}.rb %{buildroot}%{ruby_sitelib}
+# If there were programs installed:
+mkdir -p %{buildroot}%{_bindir}
+cp -a ./%{_bindir}/* %{buildroot}%{_bindir}
 
 mkdir -p %{buildroot}/var/www/stickshift/broker/config/environments/plugin-config
 cat <<EOF > %{buildroot}/var/www/stickshift/broker/config/environments/plugin-config/swingshift-kerberos-plugin.rb
@@ -89,18 +104,16 @@ echo "auth[:pubkeyfile]              - RSA public key file for node-broker authe
 
 %files
 %defattr(-,root,root,-)
-%dir %{geminstdir}
-%doc %{geminstdir}/Gemfile
-%{gemdir}/doc/%{gemname}-%{version}
-%{gemdir}/gems/%{gemname}-%{version}
-%{gemdir}/cache/%{gemname}-%{version}.gem
-%{gemdir}/specifications/%{gemname}-%{version}.gemspec
+%doc LICENSE COPYRIGHT Gemfile
+%exclude %{gem_cache}
+%{gem_instdir}
+%{gem_spec}
+%{_bindir}/*
 
 %attr(0440,apache,apache) /var/www/stickshift/broker/config/environments/plugin-config/swingshift-kerberos-plugin.rb
 
-%files -n ruby-%{gemname}
-%{ruby_sitelib}/%{gemname}
-%{ruby_sitelib}/%{gemname}.rb
+%files doc
+%doc %{gem_docdir}
 
 %changelog
 * Thu Aug 16 2012 Brenton Leanhardt <bleanhar@redhat.com> 0.8.7-1
