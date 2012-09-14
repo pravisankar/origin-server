@@ -5,17 +5,7 @@
 %{!?scl:%global pkg_name %{name}}
 %{?scl:%scl_package rubygem-%{gem_name}}
 %global gem_name swingshift-mongo-plugin
-
-%if 0%{?rhel} <= 6 && 0%{?fedora} <= 16
-%{!?ruby_sitelib: %global ruby_sitelib %(ruby -rrbconfig -e 'puts Config::CONFIG["sitelibdir"] ')}
-
-%global gem_dir %(ruby -rubygems -e 'puts Gem::dir' 2>/dev/null)
-%global gem_instdir %{gem_dir}/gems/%{gem_name}-%{version}
-%global gem_docdir %{gem_dir}/doc/%{gem_name}-%{version}
-%global gem_cache %{gem_dir}/cache
-%global gem_spec %{gem_dir}/specifications
-
-%endif #end rhel <= 6 && fedora <= 16
+%global rubyabi 1.9.1
 
 Summary:        SwingShift plugin for mongo auth service
 Name:           rubygem-%{gem_name}
@@ -26,32 +16,26 @@ License:        ASL 2.0
 URL:            http://openshift.redhat.com
 Source0:        rubygem-%{gem_name}-%{version}.tar.gz
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
-
-%if 0%{?rhel} <= 6 && 0%{?fedora} <= 16
-Requires:       ruby(abi) = 1.8
-%endif
-%if 0%{?fedora} >= 17
-Requires:       ruby(abi) = 1.9.1
-%endif
-
-Requires:       rubygem(activeresource)
-Requires:       rubygems
+Requires:       %{?scl:%scl_prefix}ruby(abi) = %{rubyabi}
+Requires:       %{?scl:%scl_prefix}ruby
+Requires:       %{?scl:%scl_prefix}rubygems
+Requires:       %{?scl:%scl_prefix}rubygem(activeresource)
+Requires:       %{?scl:%scl_prefix}rubygem(json)
+Requires:       %{?scl:%scl_prefix}rubygem(mocha)
 Requires:       rubygem(stickshift-common)
-Requires:       rubygem(json)
-
-Requires:       rubygem(mocha)
 Requires:       stickshift-broker
 Requires:  		selinux-policy-targeted
 Requires:  		policycoreutils-python
 Requires:       openssl
-
-%if 0%{?fedora} >= 17
-BuildRequires:  rubygems-devel
+%if 0%{?fedora}%{?rhel} <= 6
+BuildRequires:  ruby193-build
+BuildRequires:  scl-utils-build
 %endif
-
-BuildRequires:  ruby
-BuildRequires:  rubygems
+BuildRequires:  %{?scl:%scl_prefix}ruby(abi) = %{rubyabi}
+BuildRequires:  %{?scl:%scl_prefix}ruby 
+BuildRequires:  %{?scl:%scl_prefix}rubygems
 BuildArch:      noarch
+Provides:       rubygem(%{gem_name}) = %version
 
 %description
 Provides a mongo auth service based plugin
@@ -66,6 +50,8 @@ SwingShift plugin for mongo auth service ri documentation
 %setup -q
 
 %build
+%{?scl:scl enable %scl - << \EOF}
+mkdir -p .%{gem_dir}
 # Create the gem as gem install only works on a gem file
 gem build %{gem_name}.gemspec
 
@@ -80,6 +66,7 @@ gem install -V \
         --force \
         --rdoc \
         %{gem_name}-%{version}.gem
+%{?scl:EOF}
 
 %install
 mkdir -p %{buildroot}%{gem_dir}
