@@ -106,7 +106,7 @@ rm -rf %{buildroot}
 %config(noreplace) %attr(0750,-,-) /etc/httpd/conf.d/stickshift
 
 %config(noreplace) /etc/httpd/conf.d/000001_stickshift_node.conf
-%attr(0755,-,-) %{_var}/lib/stickshift
+%attr(0755,-,-) %{appdir}
 
 %post
 echo "/usr/bin/ss-trap-user" >> /etc/shells
