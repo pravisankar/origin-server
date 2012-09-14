@@ -91,8 +91,9 @@ rm -rf %{buildroot}
 %defattr(-,root,root,-)
 %doc %{gem_docdir}
 %doc %{gem_instdir}/Gemfile
-%{gem_dir}/doc/%{gem_name}-%{version}
-%{gem_dir}/gems/%{gem_name}-%{version}
+%dir %{gem_instdir}
+%{gem_instdir}/README.local_dns
+%{gem_instdir}/examples
 %{gem_spec}
 %{gem_cache}
 %dir %{_datadir}/selinux/packages/%{name}
