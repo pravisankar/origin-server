@@ -5,40 +5,29 @@
 %{!?scl:%global pkg_name %{name}}
 %{?scl:%scl_package rubygem-%{gem_name}}
 %global gem_name stickshift-controller
-
-%if 0%{?el6}%{?fc16}
-%global rubyabi 1.8
-%global gem_dir %(ruby -rubygems -e 'puts Gem::dir' 2>/dev/null)
-%global gem_cache %{gem_dir}/cache/%{gem_name}-%{version}.gem
-%global gem_docdir %{gem_dir}/doc/%{gem_name}-%{version}
-%global gem_instdir %{gem_dir}/gems/%{gem_name}-%{version}
-%global gem_libdir %{gem_instdir}/lib
-%global gem_spec %{gem_dir}/specifications/%{gem_name}-%{version}.gemspec
-%endif
-
+%global rubyabi 1.9.1
 
 Summary:        Cloud Development Controller
 Name:           rubygem-%{gem_name}
-Version: 0.16.5
+Version:        0.16.5
 Release:        2%{?dist}
 Group:          Development/Languages
 License:        ASL 2.0
 URL:            http://openshift.redhat.com
 Source0:        rubygem-%{gem_name}-%{version}.tar.gz
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
-
-Requires:       ruby(abi) >= 1.8
-Requires:       rubygems
-Requires:       rubygem(state_machine)
-Requires:       rubygem(stickshift-common)
-
-%if 0%{?rhel} == 6
-BuildRequires:  rubygems
-%else
-BuildRequires:  rubygems-devel
+Requires:       %{?scl:%scl_prefix}ruby(abi) = %{rubyabi}
+Requires:       %{?scl:%scl_prefix}ruby
+Requires:       %{?scl:%scl_prefix}rubygems
+Requires:       %{?scl:%scl_prefix}rubygem(state_machine)
+Requires:       %{?scl:%scl_prefix}rubygem(stickshift-common)
+%if 0%{?fedora}%{?rhel} <= 6
+BuildRequires:  ruby193-build
+BuildRequires:  scl-utils-build
 %endif
-
-BuildRequires:  ruby
+BuildRequires:  %{?scl:%scl_prefix}ruby(abi) = %{rubyabi}
+BuildRequires:  %{?scl:%scl_prefix}ruby 
+BuildRequires:  %{?scl:%scl_prefix}rubygems
 BuildArch:      noarch
 Provides:       rubygem(%{gem_name}) = %version
 
@@ -55,8 +44,8 @@ Cloud Development Controller ri documentation
 %setup -q
 
 %build
+%{?scl:scl enable %scl - << \EOF}
 mkdir -p .%{gem_dir}
-
 # Create the gem as gem install only works on a gem file
 gem build %{gem_name}.gemspec
 
@@ -67,6 +56,7 @@ gem install -V \
         --force \
         --rdoc \
         %{gem_name}-%{version}.gem
+%{?scl:EOF}
 
 %install
 mkdir -p %{buildroot}%{gem_dir}
