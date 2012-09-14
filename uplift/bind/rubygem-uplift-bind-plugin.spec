@@ -90,8 +90,7 @@ rm -rf %{buildroot}
 %files
 %defattr(-,root,root,-)
 %doc %{gem_docdir}
-%doc %{gem_instdir}/Gemfile
-%dir %{gem_instdir}
+%{gem_instdir}
 %{gem_spec}
 %{gem_cache}
 %dir %{_datadir}/selinux/packages/%{name}
