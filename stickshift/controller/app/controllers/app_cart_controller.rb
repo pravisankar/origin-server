@@ -71,17 +71,13 @@ class AppCartController < BaseController
 
     begin
       application.add_feature(name)
-    rescue StickShift::UserException => e
-      return render_error(:bad_request, "Invalid cartridge. #{e.message}", 109, "EMBED_CARTRIDGE", "cartridge")
-    end
-    
-    if application.run_jobs
+      
       cart_name = CartridgeCache.find_cartridge(name).name
       comp = application.component_instances.find_by(cartridge_name: cart_name)
       cartridge = RestCartridge11.new(nil,CartridgeCache.find_cartridge(comp.cartridge_name),application,comp,get_url,nolinks)
       return render_success(:created, "cartridge", cartridge, "EMBED_CARTRIDGE", nil, nil, nil, nil)
-    else
-      return render_success(:accepted, "cartridge", cartridge, "EMBED_CARTRIDGE", "Delayed installation for cartridge #{name} for application #{id} under domain #{domain_id}", true, :info)
+    rescue StickShift::UserException => e
+      return render_error(:bad_request, "Invalid cartridge. #{e.message}", 109, "EMBED_CARTRIDGE", "cartridge")
     end
   end
 
@@ -111,16 +107,11 @@ class AppCartController < BaseController
       end
       
       application.remove_feature(feature)
+      render_success(:ok, "application", application, "REMOVE_CARTRIDGE", "Removed #{cartridge} from application #{id}", true)
     rescue StickShift::UserException => e
       return render_error(:bad_request, "Application is currently busy performing another operation. Please try again in a minute.", 129, "REMOVE_CARTRIDGE")
     rescue Mongoid::Errors::DocumentNotFound
       return render_error(:bad_request, "Cartridge #{cartridge} not embedded within application #{id}", 129, "REMOVE_CARTRIDGE")
-    end
-    
-    if application.run_jobs      
-      render_success(:ok, "application", application, "REMOVE_CARTRIDGE", "Removed #{cartridge} from application #{id}", true)
-    else
-      return render_success(:accepted, "cartridge", cartridge, "REMOVE_CARTRIDGE", "Delayed installation for cartridge #{name} for application #{id} under domain #{domain_id}", true, :info)
     end
   end
 end

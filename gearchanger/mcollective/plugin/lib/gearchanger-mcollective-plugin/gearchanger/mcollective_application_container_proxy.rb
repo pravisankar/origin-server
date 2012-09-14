@@ -182,7 +182,7 @@ module GearChanger
           args['--with-namespace'] = app.domain.namespace
           args['--with-uid'] = gear.uid if gear.uid
           mcoll_reply = execute_direct(@@C_CONTROLLER, 'app-create', args)
-          result = parse_result(mcoll_reply)
+          result = parse_result(mcoll_reply, app, gear)
           if result.exitcode == 129 && has_uid_or_gid?(app.gear.uid) # Code to indicate uid already taken
             destroy(app, gear, true)
             inc_externally_reserved_uids_size
@@ -204,7 +204,7 @@ module GearChanger
         args['--with-namespace'] = app.domain.namespace
         args['--skip-hooks'] = true if skip_hooks
         result = execute_direct(@@C_CONTROLLER, 'app-destroy', args)
-        result_io = parse_result(result)
+        result_io = parse_result(result, app, gear)
 
         uid = gear.uid unless uid
         
@@ -222,7 +222,7 @@ module GearChanger
         args['--with-ssh-key-type'] = key_type if key_type
         args['--with-ssh-key-comment'] = comment if comment
         result = execute_direct(@@C_CONTROLLER, 'authorized-ssh-key-add', args)
-        parse_result(result)
+        parse_result(result, app , gear)
       end
 
       def remove_authorized_ssh_key(app, gear, ssh_key, comment=nil)
@@ -232,7 +232,7 @@ module GearChanger
         args['--with-ssh-key'] = ssh_key
         args['--with-ssh-comment'] = comment if comment
         result = execute_direct(@@C_CONTROLLER, 'authorized-ssh-key-remove', args)
-        parse_result(result)
+        parse_result(result, app , gear)
       end
 
       def add_env_var(app, gear, key, value)
@@ -242,7 +242,7 @@ module GearChanger
         args['--with-key'] = key
         args['--with-value'] = value
         result = execute_direct(@@C_CONTROLLER, 'env-var-add', args)
-        parse_result(result)
+        parse_result(result, app , gear)
       end
       
       def remove_env_var(app, gear, key)
@@ -251,7 +251,7 @@ module GearChanger
         args['--with-container-uuid'] = gear._id.to_s
         args['--with-key'] = key
         result = execute_direct(@@C_CONTROLLER, 'env-var-remove', args)
-        parse_result(result)
+        parse_result(result, app , gear)
       end
     
       def add_broker_auth_key(app, gear, iv, token)
@@ -261,7 +261,7 @@ module GearChanger
         args['--with-iv'] = iv
         args['--with-token'] = token
         result = execute_direct(@@C_CONTROLLER, 'broker-auth-key-add', args)
-        parse_result(result)
+        parse_result(result, app , gear)
       end
     
       def remove_broker_auth_key(app, gear)
@@ -269,7 +269,7 @@ module GearChanger
         args['--with-app-uuid'] = app._id.to_s
         args['--with-container-uuid'] = gear._id.to_s
         result = execute_direct(@@C_CONTROLLER, 'broker-auth-key-remove', args)
-        parse_result(result)
+        parse_result(result, app , gear)
       end
 
       def show_state(app, gear)
@@ -277,7 +277,7 @@ module GearChanger
         args['--with-app-uuid'] = app._id.to_s
         args['--with-container-uuid'] = gear._id.to_s
         result = execute_direct(@@C_CONTROLLER, 'app-state-show', args)
-        parse_result(result)
+        parse_result(result, app , gear)
       end
       
       def configure_cartridge(app, gear, cart, template_git_url=nil)
@@ -481,7 +481,7 @@ module GearChanger
       
       def update_namespace(app, gear, cart, new_ns, old_ns)
         mcoll_reply = execute_direct(cart, 'update-namespace', "#{gear.name} #{new_ns} #{old_ns} #{gear._id.to_s}")
-        parse_result(mcoll_reply)
+        parse_result(mcoll_reply, app , gear)
       end
 
       def get_env_var_add_job(app, gear, key, value)
@@ -1100,7 +1100,7 @@ module GearChanger
           reply.append run_cartridge_command('embedded/' + component, app, gear, 'configure')
         rescue Exception => e
           begin
-            Rails.logger.debug "DEBUG: Failed to embed '#{component}' in '#{app.name}' for user '#{app.user.login}'"
+            Rails.logger.debug "DEBUG: Failed to embed '#{component}' in '#{app.name}' for user '#{app.domain.owner.login}'"
             reply.debugIO << "Failed to embed '#{component} in '#{app.name}'"
             reply.append run_cartridge_command('embedded/' + component, app, gear, 'deconfigure')
           ensure
@@ -1165,7 +1165,7 @@ module GearChanger
           result
       end
 
-      def parse_result(mcoll_reply, app=nil, command=nil)
+      def parse_result(mcoll_reply, app=nil, gear=nil, command=nil)
         result = ResultIO.new
         
         mcoll_result = mcoll_reply[0]
@@ -1181,74 +1181,8 @@ module GearChanger
             raise StickShift::NodeException.new("Node execution failure (error getting result from node).  If the problem persists please contact Red Hat support.", 143)
           end
         end
-        
-        if output && !output.empty?
-          output.each_line do |line|
-            if line =~ /^CLIENT_(MESSAGE|RESULT|DEBUG|ERROR): /
-              if line =~ /^CLIENT_MESSAGE: /
-                result.messageIO << line['CLIENT_MESSAGE: '.length..-1]
-              elsif line =~ /^CLIENT_RESULT: /
-                result.resultIO << line['CLIENT_RESULT: '.length..-1]
-              elsif line =~ /^CLIENT_DEBUG: /
-                result.debugIO << line['CLIENT_DEBUG: '.length..-1]
-              else
-                result.errorIO << line['CLIENT_ERROR: '.length..-1]
-              end
-            elsif line =~ /^CART_DATA: /
-              result.data << line['CART_DATA: '.length..-1]
-            elsif line =~ /^CART_PROPERTIES: /
-              property = line['CART_PROPERTIES: '.length..-1].chomp.split('=')
-              result.cart_properties[property[0]] = property[1]
-            elsif line =~ /^APP_INFO: /
-              result.appInfoIO << line['APP_INFO: '.length..-1]
-            elsif result.exitcode == 0
-              if line =~ /^SSH_KEY_(ADD|REMOVE): /
-                if line =~ /^SSH_KEY_ADD: /
-                  key = line['SSH_KEY_ADD: '.length..-1].chomp
-                  result.cart_commands.push({:command => "SYSTEM_SSH_KEY_ADD", :args => [key]})
-                else
-                  result.cart_commands.push({:command => "SYSTEM_SSH_KEY_REMOVE", :args => []})
-                end
-              elsif line =~ /^APP_SSH_KEY_(ADD|REMOVE): /
-                if line =~ /^APP_SSH_KEY_ADD: /
-                  response = line['APP_SSH_KEY_ADD: '.length..-1].chomp
-                  cart,key = response.split(' ')
-                  cart = cart.gsub(".", "-")
-                  result.cart_commands.push({:command => "APP_SSH_KEY_ADD", :args => [cart, key]})
-                else
-                  cart = line['APP_SSH_KEY_REMOVE: '.length..-1].chomp
-                  cart = cart.gsub(".", "-")
-                  result.cart_commands.push({:command => "APP_SSH_KEY_REMOVE", :args => [cart]})
-                end
-              elsif line =~ /^APP_ENV_VAR_REMOVE: /
-                key = line['APP_ENV_VAR_REMOVE: '.length..-1].chomp
-                result.cart_commands.push({:command => "APP_ENV_VAR_REMOVE", :args => [key]})
-              elsif line =~ /^ENV_VAR_(ADD|REMOVE): /
-                if line =~ /^ENV_VAR_ADD: /
-                  env_var = line['ENV_VAR_ADD: '.length..-1].chomp.split('=')
-                  result.cart_commands.push({:command => "ENV_VAR_ADD", :args => [env_var[0], env_var[1]]})
-                else
-                  key = line['ENV_VAR_REMOVE: '.length..-1].chomp
-                  result.cart_commands.push({:command => "ENV_VAR_REMOVE", :args => [key]})
-                end
-              elsif line =~ /^BROKER_AUTH_KEY_(ADD|REMOVE): /
-                if line =~ /^BROKER_AUTH_KEY_ADD: /
-                  result.cart_commands.push({:command => "BROKER_KEY_ADD", :args => []})
-                else
-                  result.cart_commands.push({:command => "BROKER_KEY_REMOVE", :args => []})
-                end
-              elsif line =~ /^ATTR: /
-                attr = line['ATTR: '.length..-1].chomp.split('=')
-                result.cart_commands.push({:command => "ATTR", :args => [attr[0], attr[1]]})
-              else
-                #result.debugIO << line
-              end
-            else # exitcode != 0
-              result.debugIO << line
-              Rails.logger.debug "DEBUG: server results: " + line
-            end
-          end
-        end
+        gear_id = gear.nil? ? nil : gear._id.to_s
+        result.parse_output(output, gear_id)
         result
       end
       
@@ -1314,7 +1248,7 @@ module GearChanger
 
         result = execute_direct(framework, command, arguments)
         begin
-          resultIO = parse_result(result, app, command)
+          resultIO = parse_result(result, app, gear, command)
         rescue StickShift::InvalidNodeException => e
           if command != 'configure' && allow_move
             @id = e.server_identity
@@ -1326,7 +1260,7 @@ module GearChanger
             app.save
             #retry
             result = execute_direct(framework, command, arguments)
-            resultIO = parse_result(result, app, command)
+            resultIO = parse_result(result, app, gear, command)
           else
             raise
           end

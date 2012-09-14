@@ -1,37 +1,24 @@
-# Class to collect results from component level operations.
-# @!attribute [r] debugIO
-#   @return [StringIO] Collects debug output from the component hooks.
-# @!attribute [r] resultIO
-#   @return [StringIO] Collects stdout output from the component hooks.
-# @!attribute [r] messageIO
-#   @return [StringIO] Collects messages that the component hooks that need to be displayed to the user.
-# @!attribute [r] errorIO
-#   @return [StringIO] Collects stderr output from the component hooks.
-# @!attribute [r] appInfoIO
-#   @return [StringIO] ???
-# @!attribute [r] data
-#   @return [String] ???
-# @!attribute [r] exitcode
-#   @return [FixNum] Returns the exitcode from the component hooks.
-# @!attribute [r] exitcode
-#   @return [FixNum] Returns the exitcode from the component hooks.
-# @!attribute [r] cart_commands
-#   @return [Array] Directives returned by the component hooks processed in {Application#process_commands}
-# @!attribute [r] cart_properties
-#   @return [Array] Properties returned by component hooks processed in {ComponentInstance#process_properties}
 class ResultIO
-  attr_accessor :debugIO, :resultIO, :messageIO, :errorIO, :appInfoIO, :exitcode, :data, :cart_commands, :cart_properties
+  attr_accessor :debugIO, :resultIO, :messageIO, :errorIO, :appInfoIO, :exitcode, :cart_commands, :properties, :data
   
-  def initialize
+  def initialize(exitcode=nil, output=nil, gear_id=nil)
     @debugIO = StringIO.new
     @resultIO = StringIO.new
     @messageIO = StringIO.new
     @errorIO = StringIO.new
     @appInfoIO = StringIO.new
     @data = ""
-    @exitcode = 0
+    
+    @exitcode = exitcode || 0
     @cart_commands = []
-    @cart_properties = {}
+    @properties = {}
+    parse_output(output, gear_id) unless output.nil?
+  end
+  
+  def set_cart_property(gear_id, category, key, value)
+    self.properties[category] = {} if self.properties[category].nil?
+    self.properties[category][gear_id] = {} if self.properties[category][gear_id].nil?
+    self.properties[category][gear_id][key] = value
   end
   
   # Append a {ResultIO} to the current instance.
@@ -43,39 +30,13 @@ class ResultIO
     self.errorIO << resultIO.errorIO.string
     self.appInfoIO << resultIO.appInfoIO.string
     self.cart_commands += resultIO.cart_commands
-    self.cart_properties = resultIO.cart_properties.merge(self.cart_properties)
+    resultIO.properties.each do |category, cat_props|
+      self.properties[category] = {} if self.properties[category].nil?
+      self.properties[category] = self.properties[category].merge(cat_props) unless cat_props.nil?
+    end
     self.exitcode = resultIO.exitcode if resultIO.exitcode != 0
-    self.data += resultIO.data
     self
   end
-  
-  
-  #CART_DATA: PROXY_HOST=504605c568-localns.example.com
-  #CART_DATA: PROXY_PORT=35531
-  #CART_DATA: HOST=127.0.250.1
-  #CART_DATA: PORT=3306
-  #CLIENT_RESULT: 
-  #CLIENT_RESULT: MySQL 5.1 database added.  Please make note of these credentials:
-  #CLIENT_RESULT: 
-  #CLIENT_RESULT:    Root User: admin
-  #CLIENT_RESULT:    Root Password: K-8R3IIgd2Q5
-  #CLIENT_RESULT:    Database Name: myapp
-  #CLIENT_RESULT: 
-  #CLIENT_RESULT: Connection URL: mysql://504605c568-localns.example.com:35531/
-  #CLIENT_RESULT: MySQL gear-local connection URL: mysql://127.0.250.1:3306/
-  #CLIENT_RESULT: 
-  #CART_PROPERTIES: connection_url=mysql://504605c568-localns.example.com:35531/
-  #CART_PROPERTIES: username=admin
-  #CART_PROPERTIES: password=K-8R3IIgd2Q5
-  #CART_PROPERTIES: database_name=myapp
-  #APP_INFO: Connection URL: mysql://504605c568-localns.example.com:35531/
-  #
-  #
-  #elsif line =~ /^CART_DATA: /
-  #  result.data << line['CART_DATA: '.length..-1]
-  #elsif line =~ /^CART_PROPERTIES: /
-  #  property = line['CART_PROPERTIES: '.length..-1].chomp.split('=')
-  #  result.cart_properties[property[0]] = property[1]
   
   # Returns the output of this {ResultIO} object as a string. Primarily used for debug output.
   def to_s
@@ -85,7 +46,7 @@ class ResultIO
           "--ERROR--\n#{@errorIO.string}\n" +
           "--APP INFO--\n#{@appInfoIO.string}\n" +
           "--CART COMMANDS--\n#{@cart_commands.join("\n")}\n" +
-          "--CART PROPERTIES--\n#{@cart_properties.inspect}\n" +
+          "--CART PROPERTIES--\n#{@properties.inspect}\n" +
           "--DATA--\n#{@data}\n" +
           "--EXIT CODE--\n#{@exitcode}\n"          
   end
@@ -103,5 +64,76 @@ class ResultIO
     reply.data = @data
     reply.exit_code = @exitcode
     reply.to_json(*args)
+  end
+  
+  def parse_output(output, gear_id)
+    if output && !output.empty?
+      output.each_line do |line|
+        if line =~ /^CLIENT_(MESSAGE|RESULT|DEBUG|ERROR): /
+          if line =~ /^CLIENT_MESSAGE: /
+            self.messageIO << line['CLIENT_MESSAGE: '.length..-1]
+          elsif line =~ /^CLIENT_RESULT: /
+            self.resultIO << line['CLIENT_RESULT: '.length..-1]
+          elsif line =~ /^CLIENT_DEBUG: /
+            self.debugIO << line['CLIENT_DEBUG: '.length..-1]
+          else
+            self.errorIO << line['CLIENT_ERROR: '.length..-1]
+          end
+        elsif line =~ /^CART_DATA: /
+          key,value = line['CART_DATA: '.length..-1].chomp.split('=')
+          self.set_cart_property(gear_id, "attributes", key, value)
+        elsif line =~ /^CART_PROPERTIES: /
+          key,value = line['CART_PROPERTIES: '.length..-1].chomp.split('=')
+          self.set_cart_property(gear_id, "component-properties", key, value)
+        elsif line =~ /^ATTR: /
+          key,value = line['ATTR: '.length..-1].chomp.split('=')
+          self.set_cart_property(gear_id, "attributes", key, value)              
+        elsif line =~ /^APP_INFO: /
+          self.appInfoIO << line['APP_INFO: '.length..-1]
+        elsif self.exitcode == 0
+          if line =~ /^SSH_KEY_(ADD|REMOVE): /
+            if line =~ /^SSH_KEY_ADD: /
+              key = line['SSH_KEY_ADD: '.length..-1].chomp
+              self.cart_commands.push({:command => "SYSTEM_SSH_KEY_ADD", :args => [key]})
+            else
+              self.cart_commands.push({:command => "SYSTEM_SSH_KEY_REMOVE", :args => []})
+            end
+          elsif line =~ /^APP_SSH_KEY_(ADD|REMOVE): /
+            if line =~ /^APP_SSH_KEY_ADD: /
+              response = line['APP_SSH_KEY_ADD: '.length..-1].chomp
+              cart,key = response.split(' ')
+              cart = cart.gsub(".", "-")
+              self.cart_commands.push({:command => "APP_SSH_KEY_ADD", :args => [cart, key]})
+            else
+              cart = line['APP_SSH_KEY_REMOVE: '.length..-1].chomp
+              cart = cart.gsub(".", "-")
+              self.cart_commands.push({:command => "APP_SSH_KEY_REMOVE", :args => [cart]})
+            end
+          elsif line =~ /^APP_ENV_VAR_REMOVE: /
+            key = line['APP_ENV_VAR_REMOVE: '.length..-1].chomp
+            self.cart_commands.push({:command => "APP_ENV_VAR_REMOVE", :args => [key]})
+          elsif line =~ /^ENV_VAR_(ADD|REMOVE): /
+            if line =~ /^ENV_VAR_ADD: /
+              env_var = line['ENV_VAR_ADD: '.length..-1].chomp.split('=')
+              self.cart_commands.push({:command => "ENV_VAR_ADD", :args => [env_var[0], env_var[1]]})
+            else
+              key = line['ENV_VAR_REMOVE: '.length..-1].chomp
+              self.cart_commands.push({:command => "ENV_VAR_REMOVE", :args => [key]})
+            end
+          elsif line =~ /^BROKER_AUTH_KEY_(ADD|REMOVE): /
+            if line =~ /^BROKER_AUTH_KEY_ADD: /
+              self.cart_commands.push({:command => "BROKER_KEY_ADD", :args => []})
+            else
+              self.cart_commands.push({:command => "BROKER_KEY_REMOVE", :args => []})
+            end
+          else
+            #self.debugIO << line
+          end
+        else # exitcode != 0
+          self.debugIO << line
+          Rails.logger.debug "DEBUG: server results: " + line
+        end
+      end
+    end
   end
 end
