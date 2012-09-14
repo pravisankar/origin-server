@@ -74,8 +74,8 @@ mkdir -p %{buildroot}%{gem_dir}
 cp -a .%{gem_dir}/* %{buildroot}%{gem_dir}/
 
 # If there were programs installed:
-mkdir -p %{buildroot}%{_bindir}
-cp -a ./%{_bindir}/* %{buildroot}%{_bindir}
+#mkdir -p %{buildroot}%{_bindir}
+#cp -a ./%{_bindir}/* %{buildroot}%{_bindir}
 
 mkdir -p %{buildroot}/var/www/stickshift/broker/config/environments/plugin-config
 cat <<EOF > %{buildroot}/var/www/stickshift/broker/config/environments/plugin-config/swingshift-kerberos-plugin.rb
@@ -108,7 +108,7 @@ echo "auth[:pubkeyfile]              - RSA public key file for node-broker authe
 %exclude %{gem_cache}
 %{gem_instdir}
 %{gem_spec}
-%{_bindir}/*
+#%{_bindir}/*
 
 %attr(0440,apache,apache) /var/www/stickshift/broker/config/environments/plugin-config/swingshift-kerberos-plugin.rb
 
