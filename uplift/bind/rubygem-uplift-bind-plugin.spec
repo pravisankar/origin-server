@@ -36,7 +36,6 @@ BuildRequires:  %{?scl:%scl_prefix}ruby
 BuildRequires:  %{?scl:%scl_prefix}rubygems
 BuildRequires:  %{?scl:%scl_prefix}rubygems-devel
 BuildArch:      noarch
-
 Provides:       rubygem(%{gem_name}) = %version
 
 %description
@@ -96,7 +95,7 @@ rm -rf %{buildroot}
 %{gem_dir}/gems/%{gem_name}-%{version}
 %{gem_spec}
 %{gem_cache}
-%dir %{_datadir}/share/selinux/packages/%{name}
+%dir %{_datadir}/selinux/packages/%{name}
 %{_datadir}/selinux/packages/%{name}/*
 
 
