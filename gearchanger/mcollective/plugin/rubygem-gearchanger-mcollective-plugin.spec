@@ -5,52 +5,37 @@
 %{!?scl:%global pkg_name %{name}}
 %{?scl:%scl_package rubygem-%{gem_name}}
 %global gem_name gearchanger-mcollective-plugin
-
-%if 0%{?rhel} <= 6 && 0%{?fedora} <= 16
-%{!?ruby_sitelib: %global ruby_sitelibdir %(ruby -rrbconfig -e 'puts Config::CONFIG["sitelibdir"] ')}
-
-%global gem_dir %(ruby -rubygems -e 'puts Gem::dir' 2>/dev/null)
-%global gem_instdir %{gem_dir}/gems/%{gem_name}-%{version}
-%global gem_docdir %{gem_dir}/doc/%{gem_name}-%{version}
-%global gem_cache %{gem_dir}/cache
-%global gem_spec %{gem_dir}/specifications
-
-%endif #end rhel <= 6 && fedora <= 16
+%global rubyabi 1.9.1
 
 Summary:        GearChanger plugin for mcollective service
 Name:           rubygem-%{gem_name}
-Version: 0.3.2
+Version:        0.3.2
 Release:        2%{?dist}
 Group:          Development/Languages
 License:        ASL 2.0
 URL:            http://openshift.redhat.com
 Source0:        rubygem-%{gem_name}-%{version}.tar.gz
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
-
-%if 0%{?rhel} <= 6 && 0%{?fedora} <= 16
-Requires:       ruby(abi) = 1.8
-%endif
-%if 0%{?fedora} >= 17
-Requires:       ruby(abi) = 1.9.1
-%endif
-
-Requires:       rubygems
+Requires:       %{?scl:%scl_prefix}ruby(abi) = %{rubyabi}
+Requires:       %{?scl:%scl_prefix}ruby
+Requires:       %{?scl:%scl_prefix}rubygems
+Requires:       %{?scl:%scl_prefix}rubygem(json)
+Requires:       rubygem(stickshift-common)
 Requires:       mcollective
 Requires:       mcollective-client
 Requires:       qpid-cpp-server
 Requires:       qpid-cpp-client
 Requires:       ruby-qpid-qmf
-Requires:       rubygem(stickshift-common)
-Requires:       rubygem(json)
 Requires:       selinux-policy-targeted
 Requires:       policycoreutils-python
-
-%if 0%{?fedora} >= 17
-BuildRequires:  rubygems-devel
+%if 0%{?fedora}%{?rhel} <= 6
+BuildRequires:  ruby193-build
+BuildRequires:  scl-utils-build
 %endif
-
-BuildRequires:  ruby
-BuildRequires:  rubygems
+BuildRequires:  %{?scl:%scl_prefix}ruby(abi) = %{rubyabi}
+BuildRequires:  %{?scl:%scl_prefix}ruby
+BuildRequires:  %{?scl:%scl_prefix}rubygems
+BuildRequires:  %{?scl:%scl_prefix}rubygems-devel
 BuildArch:      noarch
 
 %description
@@ -60,6 +45,8 @@ GearChanger plugin for mcollective based node/gear manager
 %setup -q
 
 %build
+%{?scl:scl enable %scl - << \EOF}
+mkdir -p .%{gem_dir}
 # Build and install into the rubygem structure
 gem build %{gem_name}.gemspec
 gem install -V \
@@ -67,6 +54,7 @@ gem install -V \
         --install-dir ./%{gem_dir} \
         --bindir ./%{_bindir} \
         --force %{gem_name}-%{version}.gem
+%{?scl:EOF}
 
 %install
 rm -rf %{buildroot}
