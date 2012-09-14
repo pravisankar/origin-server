@@ -90,10 +90,10 @@ rm -rf %{buildroot}
 %files
 %defattr(-,root,root,-)
 %doc %{gem_docdir}
+%doc %{gem_docdir}/README.local_dns
+%doc %{gem_docdir}/examples
 %doc %{gem_instdir}/Gemfile
 %dir %{gem_instdir}
-%{gem_instdir}/README.local_dns
-%{gem_instdir}/examples
 %{gem_spec}
 %{gem_cache}
 %dir %{_datadir}/selinux/packages/%{name}
