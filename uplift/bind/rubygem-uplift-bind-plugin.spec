@@ -67,8 +67,8 @@ mkdir -p %{buildroot}%{gem_dir}
 cp -a ./%{gem_dir}/* %{buildroot}%{gem_dir}/
 
 # Add documents/examples
-mkdir -p %{buildroot}%{_docdir}/%{name}-%{version}/
-cp -r doc/* %{buildroot}%{_docdir}/%{name}-%{version}/
+#mkdir -p %{buildroot}%{_docdir}/%{name}-%{version}/
+#cp -r doc/* %{buildroot}%{_docdir}/%{name}-%{version}/
 
 # Compile SELinux policy
 mkdir -p %{buildroot}%{_datadir}/selinux/packages/%{name}
@@ -90,8 +90,8 @@ rm -rf %{buildroot}
 %files
 %defattr(-,root,root,-)
 %doc %{gem_docdir}
-%doc %{gem_docdir}/README.local_dns
-%doc %{gem_docdir}/examples
+#%doc %{gem_docdir}/README.local_dns
+#%doc %{gem_docdir}/examples
 %doc %{gem_instdir}/Gemfile
 %dir %{gem_instdir}
 %{gem_spec}
