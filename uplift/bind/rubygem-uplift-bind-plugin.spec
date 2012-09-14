@@ -90,8 +90,6 @@ rm -rf %{buildroot}
 %files
 %defattr(-,root,root,-)
 %doc %{gem_docdir}
-#%doc %{gem_docdir}/README.local_dns
-#%doc %{gem_docdir}/examples
 %doc %{gem_instdir}/Gemfile
 %dir %{gem_instdir}
 %{gem_spec}
