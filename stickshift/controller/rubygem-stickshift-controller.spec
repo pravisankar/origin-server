@@ -28,6 +28,7 @@ BuildRequires:  scl-utils-build
 BuildRequires:  %{?scl:%scl_prefix}ruby(abi) = %{rubyabi}
 BuildRequires:  %{?scl:%scl_prefix}ruby 
 BuildRequires:  %{?scl:%scl_prefix}rubygems
+BuildRequires:  %{?scl:%scl_prefix}rubygems-devel
 BuildArch:      noarch
 Provides:       rubygem(%{gem_name}) = %version
 
