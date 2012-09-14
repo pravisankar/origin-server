@@ -1,3 +1,9 @@
+%if 0%{?fedora}%{?rhel} <= 6
+    %global scl ruby193
+    %global scl_prefix ruby193-
+%endif
+%{!?scl:%global pkg_name %{name}}
+%{?scl:%scl_package rubygem-%{gem_name}}
 %global ruby_sitelib %(ruby -rrbconfig -e "puts Config::CONFIG['sitelibdir']")
 %global gemdir %(ruby -rubygems -e 'puts Gem::dir' 2>/dev/null)
 %global gemname swingshift-kerberos-plugin

@@ -1,3 +1,9 @@
+%if 0%{?fedora}%{?rhel} <= 6
+    %global scl ruby193
+    %global scl_prefix ruby193-
+%endif
+%{!?scl:%global pkg_name %{name}}
+%{?scl:%scl_package rubygem-%{gem_name}}
 %global gem_name stickshift-controller
 
 %if 0%{?el6}%{?fc16}
