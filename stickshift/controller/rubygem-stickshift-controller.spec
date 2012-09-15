@@ -20,7 +20,7 @@ Requires:       %{?scl:%scl_prefix}ruby(abi) = %{rubyabi}
 Requires:       %{?scl:%scl_prefix}ruby
 Requires:       %{?scl:%scl_prefix}rubygems
 Requires:       %{?scl:%scl_prefix}rubygem(state_machine)
-Requires:       %{?scl:%scl_prefix}rubygem(stickshift-common)
+Requires:       rubygem(stickshift-common)
 %if 0%{?fedora}%{?rhel} <= 6
 BuildRequires:  ruby193-build
 BuildRequires:  scl-utils-build
