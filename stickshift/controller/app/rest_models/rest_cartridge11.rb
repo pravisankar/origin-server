@@ -22,45 +22,48 @@ class RestCartridge11 < StickShift::Model
     self.type = "standalone"
     self.type = "embedded" if cart.categories.include? "embedded"
 
-    self.scales_from = scale[:min]
-    self.scales_to = scale[:max]
-    self.current_scale = scale[:current]
-    self.scales_from = self.scales_to = self.current_scale = 1 if cinst.is_singleton?
+    unless scale.nil?
+      self.scales_from = scale[:min]
+      self.scales_to = scale[:max]
+      self.current_scale = scale[:current]
+      self.scales_from = self.scales_to = self.current_scale = 1 if cinst.is_singleton?
+      self.gear_size = scale[:gear_size]
+      self.base_gear_storage = Gear.base_filesystem_gb(self.gear_size)
+      self.additional_gear_storage = scale[:additional_storage]
 
-    self.gear_size = scale[:gear_size]
-    self.base_gear_storage = Gear.base_filesystem_gb(self.gear_size)
-    self.additional_gear_storage = scale[:additional_storage]
+      self.collocated_with = colocated_cinsts.map{ |c| c.cartridge_name }
+    end
 
-    self.collocated_with = colocated_cinsts.map{ |c| c.cartridge_name }
-    self.supported_scales_from = comp.scaling.min
-    self.supported_scales_to = comp.scaling.max
-
+    unless comp.nil?
+      self.supported_scales_from = comp.scaling.min
+      self.supported_scales_to = comp.scaling.max
+    end
+    
+    self.properties = []
     if app.nil?
       self.provides = cart.features
     else
       self.provides = app.get_feature(cinst.cartridge_name, cinst.component_name)
-    end
-    self.help_topics = cart.help_topics
+      prop_values = cinst.component_properties
+      cart.cart_data_def.each do |data_def|
+        property = {}
+        property["name"] = data_def["Key"]
+        property["type"] = data_def["Type"]
+        property["description"] = data_def["Description"]
+        property["value"] = prop_values[data_def["Key"]] unless prop_values.nil? or prop_values[data_def["Key"]].nil?
+        self.properties << property
+      end
 
-    self.properties = []
-    prop_values = cinst.component_properties
-    cart.cart_data_def.each do |data_def|
-      property = {}
-      property["name"] = data_def["Key"]
-      property["type"] = data_def["Type"]
-      property["description"] = data_def["Description"]
-      property["value"] = prop_values[data_def["Key"]] unless prop_values.nil? or prop_values[data_def["Key"]].nil?
-      self.properties << property
-    end
-
-    self.scales_with = nil
-    app.component_instances.each do |component_instance|
-      cart = CartridgeCache::find_cartridge(component_instance.cartridge_name)
-      if cart.categories.include?("scales")
-        self.scales_with = component_instance.cartridge_name
-        break
+      self.scales_with = nil
+      app.component_instances.each do |component_instance|
+        cart = CartridgeCache::find_cartridge(component_instance.cartridge_name)
+        if cart.categories.include?("scales")
+          self.scales_with = component_instance.cartridge_name
+          break
+        end
       end
     end
+    self.help_topics = cart.help_topics
 
     if app and !nolinks
       domain_id = app.domain.namespace

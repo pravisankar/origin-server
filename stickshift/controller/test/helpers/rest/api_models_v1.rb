@@ -283,7 +283,8 @@ class RestKey_V1 < BaseObj_V1
 end
 
 class RestApplication_V1 < BaseObj_V1
-  attr_accessor :framework, :creation_time, :uuid, :embedded, :aliases, :name, :gear_count, :links, :domain_id, :git_url, :app_url, :ssh_url, :gear_profile, :scalable, :health_check_path, :scale_min, :scale_max, :build_info
+  attr_accessor :framework, :creation_time, :uuid, :embedded, :aliases, :name, :gear_count, :links, :domain_id, :git_url, :app_url,
+   :ssh_url, :gear_profile, :scalable, :health_check_path, :scale_min, :scale_max, :build_job_url, :building_with, :building_app
 
   def initialize(name=nil, framework=nil, domain_id=nil, scalable=nil)
     self.name = name
@@ -302,6 +303,10 @@ class RestApplication_V1 < BaseObj_V1
     self.scale_min = 1
     self.scale_max = -1
     self.health_check_path = nil
+    self.build_job_url = nil
+    self.building_with = nil
+    self.building_app = nil
+    
     self.links = {
       "GET" => Link_V1.new("GET", "domains/#{domain_id}/applications/#{name}"),
       "GET_DESCRIPTOR" => Link_V1.new("GET", "domains/#{domain_id}/applications/#{name}/descriptor"),
@@ -333,7 +338,14 @@ class RestApplication_V1 < BaseObj_V1
         [ Param_V1.new("event", "string", "scale-down") ]),
       "DELETE" => Link_V1.new("DELETE", "domains/#{domain_id}/applications/#{name}"),
       "ADD_CARTRIDGE" => Link_V1.new("POST", "domains/#{domain_id}/applications/#{name}/cartridges",
-        [ Param_V1.new("cartridge", "string") ]),
+          [ 
+            Param_V1.new("name", "string") 
+          ],[ 
+            OptionalParam_V1.new("colocate_with", "string"),
+            OptionalParam_V1.new("scales_from", "integer"),
+            OptionalParam_V1.new("scales_to", "integer"),
+            OptionalParam_V1.new("additional_storage", "integer")
+          ]),
       "LIST_CARTRIDGES" => Link_V1.new("GET", "domains/#{domain_id}/applications/#{name}/cartridges")
     } unless $nolinks
   end
