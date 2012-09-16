@@ -1,5 +1,6 @@
 class RestApplication < StickShift::Model
-  attr_accessor :framework, :creation_time, :uuid, :embedded, :aliases, :name, :gear_count, :links, :domain_id, :git_url, :app_url, :ssh_url, :building_with, :building_app, :build_job_url, :scalable, :health_check_path, :scale_min, :scale_max
+  attr_accessor :framework, :creation_time, :uuid, :embedded, :aliases, :name, :gear_count, :links, :domain_id, :git_url, :app_url, :ssh_url,
+   :building_with, :building_app, :build_job_url, :scalable, :health_check_path, :scale_min, :scale_max, :gear_profile
 
   def initialize(app, url, nolinks=false)
     self.embedded = {}
@@ -42,7 +43,7 @@ class RestApplication < StickShift::Model
     end
 
     app.domain.applications.each do |domain_app|
-      domain_app.component_instance.each do |component_instance|
+      domain_app.component_instances.each do |component_instance|
         cart = CartridgeCache::find_cartridge(component_instance.cartridge_name)
         if cart.categories.include?("ci")
           self.building_app = user_app.name
@@ -52,10 +53,7 @@ class RestApplication < StickShift::Model
     end
 
     unless nolinks
-      carts = nil
-      carts = CacheHelper.get_cached(cache_key, :expires_in => 21600.seconds) do
-        CartridgeCache.find_cartridge_by_category("embedded")
-      end
+      carts = CartridgeCache.find_cartridge_by_category("embedded").map{ |c| c.name }
 
       self.links = {
         "GET" => Link.new("Get application", "GET", URI::join(url, "domains/#{@domain_id}/applications/#{@name}")),

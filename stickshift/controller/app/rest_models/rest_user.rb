@@ -8,7 +8,19 @@ class RestUser < StickShift::Model
     self.capabilities = cloud_user.capabilities
     self.plan_id = cloud_user.plan_id
     self.usage_account_id = cloud_user.usage_account_id
-    @links = {
+
+    consumed_map = {}
+    cloud_user.domains.each do |domain|
+      domain.applications.each do |application|
+        application.group_instances.each do |group_instance|
+          consumed_map[group_instance.node_size] ||= 0
+          consumed_map[group_instance.node_size] += group_instance.gears.length
+        end
+      end
+    end
+    self.consumed_gear_sizes = consumed_map
+    
+    self.links = {
       "LIST_KEYS" => Link.new("Get SSH keys", "GET", URI::join(url, "user/keys")),
       "ADD_KEY" => Link.new("Add new SSH key", "POST", URI::join(url, "user/keys"), [
         Param.new("name", "string", "Name of the key"),
@@ -16,17 +28,6 @@ class RestUser < StickShift::Model
         Param.new("content", "string", "The key portion of an rsa key (excluding ssh-rsa and comment)"),
       ])
     } unless nolinks
-    consumed_map = {}
-    if cloud_user.applications
-      cloud_user.applications.each { |a|
-        a.gears.each { |g|
-          size = g.node_profile || Application.DEFAULT_NODE_PROFILE
-          consumed_map[size] = 0 if not consumed_map.has_key? size
-          consumed_map[size] = consumed_map[size] +1
-        }
-      }
-    end
-    self.consumed_gear_sizes = consumed_map
   end
   
   def to_xml(options={})
