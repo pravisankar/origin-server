@@ -180,7 +180,11 @@ class RestUser_V1 < BaseObj_V1
 end
 
 class RestCartridge_V1 < BaseObj_V1
-  attr_accessor :type, :name, :links, :properties, :version, :license, :license_url, :tags, :website, :suggests, :requires, :conflicts, :provides, :help_topics, :display_name, :description, :status_messages
+  attr_accessor :type, :name, :version, :license, :license_url, :tags, :website, :suggests, :requires, :conflicts, :provides, 
+    :help_topics, :links, :properties, :display_name, :description, :scales_from, 
+    :scales_to, :current_scale, :supported_scales_from, :supported_scales_to, 
+    :scales_with, :base_gear_storage, :additional_gear_storage, :gear_size, :collocated_with,
+    :status_messages
 
   def initialize(type=nil, name=nil)
     self.name = name
@@ -361,7 +365,7 @@ class RestGear_V1 < BaseObj_V1
 end
 
 class RestGearGroup_V1 < BaseObj_V1
-  attr_accessor :uuid, :name, :gear_profile, :gears, :cartridges, :links, :storage, :max_scale, :min_scale
+  attr_accessor :uuid, :name, :gear_profile, :gears, :cartridges, :links, :scales_from, :scales_to, :base_gear_storage, :additional_gear_storage
 
   def initialize(name=nil)
     self.uuid = uuid
@@ -370,8 +374,5 @@ class RestGearGroup_V1 < BaseObj_V1
     self.gears = nil
     self.cartridges = nil
     self.links = nil
-    self.storage = nil
-    self.min_scale = nil
-    self.max_scale = nil
   end
 end

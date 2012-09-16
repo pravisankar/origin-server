@@ -111,11 +111,13 @@ class AppCartController < BaseController
       return render_error(:not_found, "Application '#{id}' not found for domain '#{domain_id}'", 101, "EMBED_CARTRIDGE")
     end
 
-    begin
-      colocate_component_instance = application.component_instances.find_by(cartridge_name: colocate_with)
-      colocate_component_instance = colocate_component_instance.first if colocate_component_instance.class == Array
-    rescue Mongoid::Errors::DocumentNotFound
-      return render_error(:bad_request, "Invalid colocation specified. No component matches #{colocate_with}", 109, "EMBED_CARTRIDGE", "cartridge")      
+    unless colocate_with.nil? or colocate_with.empty?
+      begin
+        colocate_component_instance = application.component_instances.find_by(cartridge_name: colocate_with)
+        colocate_component_instance = colocate_component_instance.first if colocate_component_instance.class == Array
+      rescue Mongoid::Errors::DocumentNotFound
+        return render_error(:bad_request, "Invalid colocation specified. No component matches #{colocate_with}", 109, "EMBED_CARTRIDGE", "cartridge")      
+      end
     end
     
     begin
