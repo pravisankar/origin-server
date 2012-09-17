@@ -416,7 +416,7 @@ class LegacyBrokerController < BaseController
             @cloud_user.save
           rescue Exception => e
             cu = CloudUser.find_by(login: @login)
-            raise unless cu && (@cloud_user.parent_user_id == cu.parent_user_id))
+            raise unless cu && (@cloud_user.parent_user_id == cu.parent_user_id)
             @cloud_user = cu
           end
         end
