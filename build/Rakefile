@@ -230,3 +230,11 @@ task :clean do
   sudo "rm -rf #{rpmdir}/*"
   sudo "rm -rf /etc/yum.repos.d/ss.repo #{remix_dir}/cache/local-build #{remix_dir}/livecd.log #{remix_dir}/openshift_origin.iso"
 end
+
+task :del_apps do
+  sudo 'mongo broker_test --eval "db.dropDatabase();"'
+  sudo 'mongo broker_development --eval "db.dropDatabase();"'
+  sudo 'rm -rf "/var/lib/stickshift/[0-9a-f]* /var/lib/stickshift/.httpd.d/[0-9a-f]*"'
+  (500..520).each { |x| `pkill -u #{x}` }
+  sudo 'ss-setup-broker'
+end
