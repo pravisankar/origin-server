@@ -62,7 +62,7 @@ gem install -V \
 %install
 mkdir -p %{buildroot}%{gem_dir}
 cp -a ./%{gem_dir}/* %{buildroot}%{gem_dir}/
-rm -rf %{buildroot}%{gem_instdir}/test
+#rm -rf %{buildroot}%{gem_instdir}/test
 
 %files
 %doc %{gem_instdir}/Gemfile

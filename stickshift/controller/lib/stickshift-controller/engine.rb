@@ -19,7 +19,8 @@ module ActionDispatch
     delegate :patch, :to => :request
   end
   
-  module Routing  
+  module Routing
+    self.send(:remove_const, "HTTP_METHODS")
     HTTP_METHODS = [:get, :head, :post, :put, :delete, :options, :patch]
     
     class Mapper

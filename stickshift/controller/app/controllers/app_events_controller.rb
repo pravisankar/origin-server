@@ -10,13 +10,20 @@ class AppEventsController < BaseController
     event = params[:event]
     server_alias = params[:alias]
     
-    domain = Domain.get(@cloud_user, domain_id)
-    return render_error(:not_found, "Domain #{domain_id} not found", 127,
-                        "APPLICATION_EVENT") if !domain || !domain.hasAccess?(@cloud_user)
+    begin
+      domain = Domain.find_by(owner: @cloud_user, namespace: domain_id)
+    rescue Mongoid::Errors::DocumentNotFound
+      return render_error(:not_found, "Domain #{domain_id} not found", 127,
+                          "APPLICATION_EVENT") if !domain || !domain.hasAccess?(@cloud_user)
+    end
 
-    application = Application.find(@cloud_user,id)
-    return render_error(:not_found, "Application '#{id}' not found", 101,
+    begin
+      application = Application.find_by(domain: domain, name: id)
+    rescue Mongoid::Errors::DocumentNotFound
+      return render_error(:not_found, "Application '#{id}' not found", 101,
                         "APPLICATION_EVENT") unless application
+    end
+
     return render_error(:unprocessable_entity, "Alias must be specified for adding or removing application alias.", 126,
                         "APPLICATION_EVENT", "event") if ['add-alias', 'remove-alias'].include?(event) && !server_alias
     return render_error(:unprocessable_entity, "Reached gear limit of #{@cloud_user.max_gears}", 104,
@@ -32,7 +39,7 @@ class AppEventsController < BaseController
           application.stop
           msg = "Application #{id} has stopped"
         when "force-stop"
-          application.force_stop
+          application.stop(nil, true)
           msg = "Application #{id} has forcefully stopped"
         when "restart"
           application.restart
@@ -55,11 +62,11 @@ class AppEventsController < BaseController
           msg = "Application #{id} has removed alias"
         when "scale-up"
           web_framework_component_instance = application.component_instances.select{ |c| CartridgeCache.find_cartridge(c.cartridge_name).categories.include?("web_framework") }.first
-          application.scaleby(web_framework_component_instance.group_instance_id, 1)
+          application.scale_by(web_framework_component_instance.group_instance_id, 1)
           msg = "Application #{id} has scaled up"
         when "scale-down"
           web_framework_component_instance = application.component_instances.select{ |c| CartridgeCache.find_cartridge(c.cartridge_name).categories.include?("web_framework") }.first
-          application.scaleby(web_framework_component_instance.group_instance_id, -1)
+          application.scale_by(web_framework_component_instance.group_instance_id, -1)
           msg = "Application #{id} has scaled down"
         else
           return render_error(:unprocessable_entity, "Invalid application event '#{event}' specified",
@@ -68,7 +75,8 @@ class AppEventsController < BaseController
     rescue Exception => e
       return render_exception(e, "#{event.sub('-', '_').upcase}_APPLICATION")
     end
-    application = Application.find(@cloud_user, id)
+
+    application = Application.find_by(domain: domain, name: id)
     app = RestApplication.new(application, get_url, nolinks)
     @reply = RestReply.new(:ok, "application", app)
     message = Message.new("INFO", msg)

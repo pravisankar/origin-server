@@ -26,7 +26,9 @@ gem 'jquery-rails'
 
 group :development do
   gem 'minitest'
+  gem 'simplecov'
 end
+
 
 # To use ActiveModel has_secure_password
 # gem 'bcrypt-ruby', '~> 3.0.0'
@@ -44,3 +46,9 @@ end
 # gem 'ruby-debug'
 
 # Add plugin gems here
+gem 'gearchanger-mcollective-plugin'
+
+gem 'uplift-bind-plugin'
+
+gem 'swingshift-mongo-plugin'
+

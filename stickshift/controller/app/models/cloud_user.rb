@@ -36,6 +36,9 @@ class CloudUser
   validates :login, presence: true, login: true
   validates :capabilities, presence: true, capabilities: true
   
+  index({:login => 1}, {:unique => true})
+  create_indexes
+  
   # Returns a map of field to error code for validation failures.
   def self.validation_map
     {login: 107, capabilities: 107}

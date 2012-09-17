@@ -1,9 +1,9 @@
-require 'helpers/rest/api_common'
+require "#{File.dirname(__FILE__)}/api_common"
 
 class Param_V1 < BaseObj
   attr_accessor :name, :type, :description, :valid_options, :invalid_options
 
-  def initialize(name=nil, type=nil, valid_options=nil, invalid_options=nil)
+  def initialize(name=nil, type=nil, valid_options=[], invalid_options=[])
     self.name = name
     self.type = type
     self.description = nil
@@ -29,7 +29,7 @@ end
 class OptionalParam_V1 < BaseObj
   attr_accessor :name, :type, :description, :valid_options, :default_value
 
-  def initialize(name=nil, type=nil, valid_options=nil, default_value=nil)
+  def initialize(name=nil, type=nil, valid_options=[], default_value=nil)
     self.name = name
     self.type = type
     self.description = nil
@@ -180,7 +180,7 @@ class RestUser_V1 < BaseObj_V1
 end
 
 class RestCartridge_V1 < BaseObj_V1
-  attr_accessor :type, :name, :links, :properties                                                                                                                                                                                                                                 
+  attr_accessor :type, :name, :links, :properties, :version, :license, :license_url, :tags, :website, :suggests, :requires, :conflicts, :provides, :help_topics, :display_name, :description                                                                                                                                                                                                                                 
   
   def initialize(type=nil, name=nil)
     self.name = name
