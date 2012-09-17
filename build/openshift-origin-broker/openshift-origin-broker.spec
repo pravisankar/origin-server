@@ -64,7 +64,7 @@ if [ "x`fgrep smallfiles=true /etc/mongodb.conf`x" != "xsmallfiles=truex" ] ; th
   echo "smallfiles=true" >> /etc/mongodb.conf
 fi
 
-pushd /var/www/stickshift/broker/ && bundle install && chown apache:apache Gemfile.lock && popd
+pushd /var/www/stickshift/broker/ && rm -f Gemfile.lock && bundle install && chown apache:apache Gemfile.lock && popd
 
 cat <<EOF > /etc/mcollective/client.cfg
 topicprefix = /topic/

@@ -1,3 +1,4 @@
+ENV["TEST_NAME"] = "UsageModelTest"
 require 'test_helper'
 
 class UsageModelTest < ActiveSupport::TestCase

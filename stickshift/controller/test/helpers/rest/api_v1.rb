@@ -286,7 +286,7 @@ REST_CALLS_V1 = [
                   user_get_v1,
                   cartridge_list_get_v1,
                   #estimates_list_get_v1,
-                  #stimates_app_get_v1,
+                  #estimates_app_get_v1,
                   #template_list_get_v1,
                   domain_add_post_v1,
                   domains_list_get_v1,
