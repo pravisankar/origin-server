@@ -36,14 +36,14 @@ rescue Exception => e
 end
 
 if opt['help'] || !opt['login'] || !opt['password'] || !opt['username'] || !opt['userpass']
-    p_usage
+  p_usage
 end
 
 ActiveResource::Base.include_root_in_json = false
 module ActiveResource
   module Formats
     #
-    # The OpenShift REST API wraps the root resource element whi
+    # The OpenShift REST API wraps the root resource element which needs
     # to be unwrapped.
     #
     module OpenshiftJsonFormat
@@ -52,14 +52,7 @@ module ActiveResource
 
       def decode(json)
         decoded = super
-        if decoded.is_a?(Hash) and decoded.has_key?('data')
-          decoded = decoded['data']
-        end
-        if decoded.is_a?(Array)
-          decoded.each { |i| i.delete 'links' }
-        else
-          decoded.delete 'links'
-        end
+        decoded = decoded['data'] if decoded.is_a?(Hash) and decoded.has_key?('data')
         decoded
       end
     end
@@ -83,7 +76,7 @@ class Account < ActiveResource::Base
   end
 end
 
-acc = Account.new(:username => opt['username'], :password => opt['userpass'])
+acc = Account.new(:username => opt['username'], :password => opt['userpass'], :nolinks => true)
 if acc.save
   print "User created succesfully\n"
 else

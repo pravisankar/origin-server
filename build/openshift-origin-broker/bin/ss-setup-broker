@@ -197,7 +197,7 @@ system "lokkit -p 5672:tcp"  #qpid
 ### Begin mongo setup
 
 print "Starting mongodb\n"
-system "chkconfig mongod on" 
+system "/sbin/chkconfig mongod on" 
 
 unless build
   system "service mongod start"
