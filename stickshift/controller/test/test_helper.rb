@@ -1,15 +1,13 @@
-# Configure Rails Environment
 ENV["RAILS_ENV"] = "test"
+ENV['COVERAGE'] = 'true'
 
 require File.expand_path("../dummy/config/environment.rb",  __FILE__)
 require "rails/test_help"
 
+@engines = Rails.application.railties.engines.map { |e| e.config.root.to_s }
+
 Rails.backtrace_cleaner.remove_silencers!
 
-# Load support files
-Dir["#{File.dirname(__FILE__)}/support/**/*.rb"].each { |f| require f }
-
-# Load fixtures from the engine
-if ActiveSupport::TestCase.method_defined?(:fixture_path=)
-  ActiveSupport::TestCase.fixture_path = File.expand_path("../fixtures", __FILE__)
+def gen_uuid
+  %x[/usr/bin/uuidgen].gsub('-', '').strip 
 end

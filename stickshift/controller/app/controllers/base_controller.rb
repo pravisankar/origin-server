@@ -96,7 +96,7 @@ class BaseController < ApplicationController
           Rails.logger.debug "Adding user #{subuser_name} as sub user of #{@parent_user.login} ...inside base_controller"
           @cloud_user = CloudUser.new(login: subuser_name, parent_user_id: @parent_user._id)
           ###TODO: inherit capabilities?
-          @cloud_user.save
+          @cloud_user.with(safe: true).create
         else
           @cloud_user = sub_user
         end
@@ -106,7 +106,7 @@ class BaseController < ApplicationController
         rescue Mongoid::Errors::DocumentNotFound
           Rails.logger.debug "Adding user #{@login}...inside base_controller"
           @cloud_user = CloudUser.new(login: @login)
-          @cloud_user.save
+          @cloud_user.with(safe: true).save
         end
       end
       
@@ -151,6 +151,7 @@ class BaseController < ApplicationController
  
   def check_version
     accept_header = request.headers['Accept']
+    Rails.logger.debug accept_header
     mime_types = accept_header.split(%r{,\s*})
     version_header = API_VERSION
     mime_types.each do |mime_type|

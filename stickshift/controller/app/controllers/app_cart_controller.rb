@@ -72,7 +72,7 @@ class AppCartController < BaseController
     end
 
     begin
-      application.add_feature(name)
+      application.add_features([name])
       
       cart_name = CartridgeCache.find_cartridge(name).name
       comp = application.component_instances.find_by(cartridge_name: cart_name)
@@ -108,8 +108,8 @@ class AppCartController < BaseController
         raise StickShift::UserException.new("Invalid cartridge #{id}")
       end
       
-      application.remove_feature(feature)
-      render_success(:ok, "application", application, "REMOVE_CARTRIDGE", "Removed #{cartridge} from application #{id}", true)
+      application.remove_features([feature])
+      render_success(:ok, "application", RestApplication.new(application, get_url, nolinks), "REMOVE_CARTRIDGE", "Removed #{cartridge} from application #{id}", true)
     rescue StickShift::UserException => e
       return render_error(:bad_request, "Application is currently busy performing another operation. Please try again in a minute.", 129, "REMOVE_CARTRIDGE")
     rescue Mongoid::Errors::DocumentNotFound

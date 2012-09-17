@@ -591,7 +591,7 @@ class Application
     Application.run_in_application_lock(self) do
       raise StickShift::UserException.new("Alias #{fqdn} is already registered") if Application.where(aliases: fqdn).count > 0
       aliases.push(fqdn)
-      op_group = PendingAppOpGroup.with_single_op(:add_alias, {"fqdn" => fqdn})
+      op_group = PendingAppOpGroup.new(optype: :add_alias, args: {"fqdn" => fqdn})
       self.pending_op_groups.push op_group
       result_io = ResultIO.new
       self.run_jobs(result_io)
@@ -611,7 +611,7 @@ class Application
     Application.run_in_application_lock(self) do
       return unless aliases.include? fqdn
       aliases.delete(fqdn)
-      op_group = PendingAppOpGroup.with_single_op(:remove_alias, {"fqdn" => fqdn})
+      op_group = PendingAppOpGroup.new(optype: :remove_alias, args: {"fqdn" => fqdn})
       self.pending_op_groups.push op_group
       result_io = ResultIO.new
       self.run_jobs(result_io)

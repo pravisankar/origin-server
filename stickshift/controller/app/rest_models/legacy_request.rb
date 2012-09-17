@@ -1,4 +1,6 @@
 class LegacyRequest < StickShift::Model
+  include ActiveModel::Validations  
+  
   attr_accessor :namespace, :rhlogin, :ssh, :app_uuid, :app_name, :node_profile, :debug, :alter, :delete, :cartridge, :api, :cart_type, :action, :server_alias, :api, :key_name, :key_type
   attr_reader   :invalid_keys
   
@@ -112,6 +114,12 @@ class LegacyRequest < StickShift::Model
   
   def delete
     @delete == "true" || @delete == true
+  end
+  
+  def from_json(data)
+    data = JSON.parse(data) if data.class == String
+    self.attributes=data
+    self
   end
 
   def attributes=(hash)
