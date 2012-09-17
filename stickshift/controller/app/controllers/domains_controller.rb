@@ -101,9 +101,10 @@ class DomainsController < BaseController
     end
 
     if force
-      
+      domain.applications.each do |app|
+        app.destroy_app
+      end
     elsif not domain.applications.empty?
-      app = domain.applications.first
       return render_error(:bad_request, "Domain contains applications. Delete applications first or set force to true.", 128, "DELETE_DOMAIN")
     end
 

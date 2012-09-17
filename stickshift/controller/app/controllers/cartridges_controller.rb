@@ -15,6 +15,13 @@ class CartridgesController < BaseController
       cartridges = CartridgeCache.cartridges.keep_if{ |c| c.categories.include?(type) }
     end
     
-    render_success(:ok, "cartridges", cartridges.map{|c| RestCartridge11.new(nil, c, nil, nil, nil, nil, nil, get_url, nolinks)}, "LIST_CARTRIDGES", "List #{type.nil? ? 'all' : type} cartridges") 
+    cartridges.map! do |c|
+      if $requested_api_version >= 1.1
+        RestCartridge11.new(c, nil, nil, nil, nil, nil, get_url, nolinks)
+      else
+        RestCartridge10.new(c, nil, nil, get_url, nolinks)
+      end
+    end
+    render_success(:ok, "cartridges", cartridges, "LIST_CARTRIDGES", "List #{type.nil? ? 'all' : type} cartridges")
   end
 end

@@ -29,7 +29,7 @@ class Domain
   embeds_many :system_ssh_keys, class_name: SystemSshKey.name
   belongs_to :owner, class_name: CloudUser.name
   field :user_ids, type: Array, default: []
-  has_many :applications, class_name: Application.name
+  has_many :applications, class_name: Application.name, dependent: :restrict
   embeds_many :pending_ops, class_name: PendingDomainOps.name
   
   validates :namespace,

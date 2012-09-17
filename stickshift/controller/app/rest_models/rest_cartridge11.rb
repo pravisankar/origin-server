@@ -4,7 +4,7 @@ class RestCartridge11 < StickShift::Model
     :scales_to, :current_scale, :supported_scales_from, :supported_scales_to, 
     :scales_with, :base_gear_storage, :additional_gear_storage, :gear_size, :collocated_with
 
-  def initialize(type, cart, comp, app, cinst, colocated_cinsts, scale, url, nolinks=false)
+  def initialize(cart, comp, app, cinst, colocated_cinsts, scale, url, nolinks=false)
     self.name = cart.name
     self.version = cart.version
     self.display_name = cart.display_name

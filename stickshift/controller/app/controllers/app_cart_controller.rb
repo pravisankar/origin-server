@@ -198,6 +198,10 @@ class AppCartController < BaseController
     
     cart = CartridgeCache.find_cartridge(component_instance.cartridge_name)
     comp = cart.get_component(component_instance.component_name)
-    RestCartridge11.new(nil, cart, comp, application, component_instance, colocated_instances, scale, get_url, nolinks)
+    if $requested_api_version >= 1.1
+      RestCartridge11.new(cart, comp, application, component_instance, colocated_instances, scale, get_url, nolinks)
+    else
+      RestCartridge10.new(cart, comp, application, component_instance, colocated_instances, scale, get_url, nolinks)
+    end
   end
 end
