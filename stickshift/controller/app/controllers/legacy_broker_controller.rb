@@ -131,10 +131,11 @@ class LegacyBrokerController < BaseController
   end
   
   def domain_post
-    domain = get_domain(@cloud_user, @req.namespace)
-    domain = @cloud_user.domains.first if !domain && @req.alter
+    if(@req.alter == true || @req.delete == true)
+      domain = Domain.find_by(owner: @cloud_user, namespace: @req.namespace)
+    end
     
-    if (!domain or not domain.hasFullAccess?(@cloud_user)) && (@req.alter || @req.delete)
+    if domain.nil? && (@req.alter || @req.delete)
       log_action(@request_id, @cloud_user._id.to_s, @login, "LEGACY_ALTER_DOMAIN", false, "Cannot alter or remove namespace #{@req.namespace}. Namespace does not exist.")
       @reply.resultIO << "Cannot alter or remove namespace #{@req.namespace}. Namespace does not exist.\n"
       @reply.exitcode = 106
@@ -164,34 +165,25 @@ class LegacyBrokerController < BaseController
         log_action(@request_id, @cloud_user._id.to_s, @login, "LEGACY_ALTER_DOMAIN", true, "Updated SSH key '#{@req.key_name}' for domain #{domain.namespace}")
       end
     elsif @req.delete
-       if not domain.hasFullAccess?(@cloud_user)
-         log_action(@request_id, @cloud_user._id.to_s, @login, "LEGACY_DELETE_DOMAIN", false, "Domain #{domain.namespace} is not associated with user")
-         @reply.resultIO << "Cannot remove namespace #{@req.namespace}. This namespace is not associated with login: #{@cloud_user.login}\n"
-         @reply.exitcode = 106
-         render :json => @reply, :status => :bad_request
-         return
-       end
-       if not @cloud_user.applications.empty?
-         @cloud_user.applications.each do |app|
-           if app.domain == domain
-             log_action(@request_id, @cloud_user._id.to_s, @login, "LEGACY_DELETE_DOMAIN", false, "Domain #{domain.namespace} contains applications")
-             @reply.resultIO << "Cannot remove namespace #{@req.namespace}. Remove existing app(s) first: "
-             @reply.resultIO << @cloud_user.applications.map{|a| a.name}.join("\n")
-             @reply.exitcode = 106 
-             render :json => @reply, :status => :bad_request
-         return
-           end
+       if not domain.applications.empty?
+         domain.applications.each do |app|
+           log_action(@request_id, @cloud_user._id.to_s, @login, "LEGACY_DELETE_DOMAIN", false, "Domain #{domain.namespace} contains applications")
+           @reply.resultIO << "Cannot remove namespace #{@req.namespace}. Remove existing app(s) first: "
+           @reply.resultIO << domain.applications.map{|a| a.name}.join("\n")
+           @reply.exitcode = 106 
+           render :json => @reply, :status => :bad_request
          end
        end
-       @reply.append domain.delete
+       domain.delete
        log_action(@request_id, @cloud_user._id.to_s, @login, "LEGACY_DELETE_DOMAIN", true, "Deleted domain #{@req.namespace}")
        render :json => @reply
        return
     else
       raise StickShift::UserException.new("The supplied namespace '#{@req.namespace}' is not allowed", 106) if StickShift::ApplicationContainerProxy.blacklisted? @req.namespace
       raise StickShift::UserException.new("Domain already exists for user. Update the domain to modify.", 158) if !@cloud_user.domains.empty?
+      raise StickShift::UserException.new("The supplied namespace '#{@req.namespace}' is already in use. Please choose another", 106) if Domain.where(namespace: @req.namespace).count > 0
 
-      key = Key.new(CloudUser::DEFAULT_SSH_KEY_NAME, @req.key_type, @req.ssh)
+      key = SshKey.new(name: CloudUser::DEFAULT_SSH_KEY_NAME, type: @req.key_type, content: @req.ssh)
       if key.invalid?
          log_action(@request_id, @cloud_user._id.to_s, @login, "LEGACY_CREATE_DOMAIN", false, "Failed to create domain #{@req.namespace}: #{key.errors.first[1][:message]}")
          @reply.resultIO << key.errors.first[1][:message]
@@ -199,13 +191,14 @@ class LegacyBrokerController < BaseController
          render :json => @reply, :status => :bad_request 
          return
       end
-      @cloud_user.add_ssh_key(CloudUser::DEFAULT_SSH_KEY_NAME, @req.ssh, @req.key_type)
-      domain = Domain.new(@req.namespace, @cloud_user)
-      @reply.append domain.save
+      @cloud_user.add_ssh_key(key)
+      
+      domain = Domain.new(namespace: @req.namespace, owner: @cloud_user)
+      domain.with(safe: true).save
+      
       log_action(@request_id, @cloud_user._id.to_s, @login, "LEGACY_CREATE_DOMAIN", true, "Created domain #{@req.namespace}")
     end
 
-    @reply.append @cloud_user.save
     @reply.data = {
       :rhlogin    => @cloud_user.login,
       :uuid       => @cloud_user._id.to_s,
@@ -340,7 +333,8 @@ class LegacyBrokerController < BaseController
         raise StickShift::UserException.new("#{@login} has already reached the gear limit of #{@cloud_user.max_gears}", 104)
       end
     when 'deconfigure'
-      @reply.append app.remove_features [feature_provided_by_cartridge(@req.cartridge)]
+      feature = app.component_instances.find_by(cartridge_name: @req.cartridge).get_feature
+      @reply.append app.remove_features [feature]
     when 'start'
       @reply.append app.start(@req.cartridge)      
     when 'stop'
@@ -479,11 +473,11 @@ class LegacyBrokerController < BaseController
   
   def get_domain(cloud_user, id)
     domains = Domain.where(owner: cloud_user, namespace: id)
-    if domain.count > 1
+    if domains.count > 1
       return domains.first
     end
     domains = Domain.where(user_ids: cloud_user._id, namespace: id)
-    if domain.count > 1
+    if domains.count > 1
       return domains.first
     end
     return nil

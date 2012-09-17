@@ -85,7 +85,7 @@ class Application
     app = Application.new(domain: domain, features: features, name: application_name, default_gear_size: default_gear_size)
     if app.valid?
       begin
-        Application.run_in_application_lock(app){ app.run_jobs(result_io) }
+        app.add_features(features)
       rescue Exception => e
         app.delete
         raise e
@@ -117,12 +117,6 @@ class Application
     self.usage_records = []
     self.pending_op_groups = []
     self.save
-    begin
-      add_features(features, group_overrides)
-    rescue Exception => e
-      self.delete
-      raise e
-    end
   end
 
   # Adds an additional namespace to the application. This function supports the first step of the update namespace workflow.
@@ -588,10 +582,14 @@ class Application
   # == Raises:
   # StickShift::UserException if the alias is already been associated with an application.
   def add_alias(fqdn)
+    if !(fqdn =~ /\A[\w\-\.]+\z/) or (fqdn =~ /#{Rails.configuration.ss[:domain_suffix]}$/)
+      raise StickShift::UserException.new("Invalid Server Alias '#{fqdn}' specified", 105) 
+    end
+    
     Application.run_in_application_lock(self) do
       raise StickShift::UserException.new("Alias #{fqdn} is already registered") if Application.where(aliases: fqdn).count > 0
       aliases.push(fqdn)
-      op_group = PendingAppOpGroup.new(optype: :add_alias, args: {"fqdn" => fqdn})
+      op_group = PendingAppOpGroup.new(op_type: :add_alias, args: {"fqdn" => fqdn})
       self.pending_op_groups.push op_group
       result_io = ResultIO.new
       self.run_jobs(result_io)
@@ -611,7 +609,7 @@ class Application
     Application.run_in_application_lock(self) do
       return unless aliases.include? fqdn
       aliases.delete(fqdn)
-      op_group = PendingAppOpGroup.new(optype: :remove_alias, args: {"fqdn" => fqdn})
+      op_group = PendingAppOpGroup.new(op_type: :remove_alias, args: {"fqdn" => fqdn})
       self.pending_op_groups.push op_group
       result_io = ResultIO.new
       self.run_jobs(result_io)
@@ -621,6 +619,7 @@ class Application
 
   def set_connections(connections)
     conns = []
+    self.connections = [] if connections.nil? or connections.empty?
     connections.each do |conn_info|
       from_comp_inst = self.component_instances.find_by(cartridge_name: conn_info["from_comp_inst"]["cart"], component_name: conn_info["from_comp_inst"]["comp"])
       to_comp_inst = self.component_instances.find_by(cartridge_name: conn_info["to_comp_inst"]["cart"], component_name: conn_info["to_comp_inst"]["comp"])
@@ -809,11 +808,21 @@ class Application
             ops, add_gear_count, rm_gear_count = calculate_scale_by(op_group.args["group_instance_id"], op_group.args["scale_by"])
             try_reserve_gears(add_gear_count, rm_gear_count, op_group, ops)
           when :add_alias
-            #need rollback
-            #todo
+            self.group_instances.each do |group_instance|
+              if group_instance.gears.where(app_dns: true).count > 0
+                gear = group_instance.gears.find_by(app_dns: true)
+                op_group.pending_ops.push PendingAppOp.new(op_type: :add_alias, args: {"group_instance_id" => group_instance.id.to_s, "gear_id" => gear.id.to_s, "fqdn" => op_group.args["fqdn"]} )
+                break
+              end
+            end
           when :remove_alias
-            #need rollback
-            #todo
+            self.group_instances.each do |group_instance|
+              if group_instance.gears.where(app_dns: true).count > 0
+                gear = group_instance.gears.find_by(app_dns: true)
+                op_group.pending_ops.push PendingAppOp.new(op_type: :remove_alias, args: {"group_instance_id" => group_instance.id.to_s, "gear_id" => gear.id.to_s, "fqdn" => op_group.args["fqdn"]} )
+                break
+              end
+            end
           when :start_app, :stop_app, :restart_app, :reload_app_config, :tidy_app
             ops = calculate_ctl_app_component_ops(op_group.op_type)
             op_group.pending_ops.push(*ops)
@@ -827,7 +836,7 @@ class Application
         end
     
         if op_group.op_type != :delete_app
-          op_group.execute
+          op_group.execute(result_io)
           unreserve_gears(op_group.num_gears_removed)
           op_group.delete
           self.reload            
@@ -837,7 +846,7 @@ class Application
     rescue Exception => e_orig
       #rollback
       begin
-        op_group.execute_rollback
+        op_group.execute_rollback(result_io)
       rescue Exception => e_rollback
         Rails.logger.error "Error during rollback"
         Rails.logger.error e_rollback.message
@@ -1399,7 +1408,7 @@ class Application
     #calculate initial list based on user provided dependencies
     features.each do |feature|
       cart = CartridgeCache.find_cartridge(feature)
-      raise StickShift::UserException.new("No cartridge found that provides #{feature}") if cart.nil?
+      raise StickShift::UnfulfilledRequirementException.new(feature) if cart.nil?
       prof = cart.profile_for_feature(feature)
       added_cartridges << cart
       profiles << {cartridge: cart, profile: prof}
@@ -1414,7 +1423,7 @@ class Application
           next if profiles.count{|d| d[:cartridge].features.include?(feature)} > 0
 
           cart = CartridgeCache.find_cartridge(feature)
-          raise StickShift::UserException.new("No cartridge found that provides #{feature} (transitive dependency)") if cart.nil?
+          raise StickShift::UnfulfilledRequirementException.new(feature) if cart.nil?
           prof = cart.profile_for_feature(feature)
           added_cartridges << cart
           profiles << {cartridge: cart, profile: prof}

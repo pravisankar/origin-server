@@ -463,20 +463,12 @@ module GearChanger
         run_cartridge_command(cart, app, gear, "show-port")
       end
 
-      def add_alias(app, gear, cart, server_alias)
-        if framework_carts.include?(cart)
-          run_cartridge_command(cart, app, gear, "add-alias", server_alias)
-        else
-          ResultIO.new
-        end
+      def add_alias(app, gear, server_alias)
+        run_cartridge_command("abstract", app, gear, "add-alias", server_alias)
       end
       
-      def remove_alias(app, gear, cart, server_alias)
-        if framework_carts.include?(cart)        
-          run_cartridge_command(cart, app, gear, "remove-alias", server_alias)
-        else
-          ResultIO.new
-        end
+      def remove_alias(app, gear, server_alias)       
+        run_cartridge_command("abstract", app, gear, "remove-alias", server_alias)
       end
       
       def update_namespace(app, gear, cart, new_ns, old_ns)

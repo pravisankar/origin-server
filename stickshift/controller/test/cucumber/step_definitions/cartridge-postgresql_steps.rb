@@ -1,6 +1,7 @@
 # step descriptions for PostgreSQL cartridge behavior.
 
-require 'postgres'
+require 'rubygems'
+require 'pg'
 require 'fileutils'
 
 

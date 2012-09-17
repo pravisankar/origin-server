@@ -36,18 +36,18 @@ $submodule_repo_dir = "#{Etc.getpwuid.dir}/submodule_test_repo"
 #
 # Old RHC Client scripts
 #
-$create_app_script = "/usr/bin/rhc-create-app"
-$create_domain_script = "/usr/bin/rhc-create-domain"
-$ctl_app_script = "/usr/bin/rhc-ctl-app"
-$user_info_script = "/usr/bin/rhc-domain-info"
-$snapshot_script = "/usr/bin/rhc-snapshot"
+$create_app_script = "/usr/local/bin/rhc-create-app"
+$create_domain_script = "/usr/local/bin/rhc-create-domain"
+$ctl_app_script = "/usr/local/bin/rhc-ctl-app"
+$user_info_script = "/usr/local/bin/rhc-domain-info"
+$snapshot_script = "/usr/local/bin/rhc-snapshot"
 
 #
 # New RHC Client scripts
 #
-$rhc_app_script = "/usr/bin/rhc-app"
-$rhc_domain_script = "/usr/bin/rhc-domain"
-$rhc_sshkey_script = "/usr/bin/rhc-sshkey"
+$rhc_app_script = "/usr/local/bin/rhc-app"
+$rhc_domain_script = "/usr/local/bin/rhc-domain"
+$rhc_sshkey_script = "/usr/local/bin/rhc-sshkey"
 
 # RSA Key constants
 $test_pub_key = File.expand_path("~/.ssh/id_rsa.pub")
