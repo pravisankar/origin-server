@@ -10,7 +10,7 @@ require 'ddns/named_service'
 require 'dnsruby'
 require 'lib/stickshift-controller/lib/stickshift/dns_service'
 require 'lib/stickshift-controller/lib/stickshift/bind_dns_service'
-
+ENV["TEST_NAME"] = "BindDnsServiceTest"
 
 class BindDnsServiceTest < ActiveSupport::TestCase
   include StickShift

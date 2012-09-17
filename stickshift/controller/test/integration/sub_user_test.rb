@@ -1,4 +1,5 @@
 require 'test_helper'
+ENV["TEST_NAME"] = "SubUserTest"
 
 class SubUserTest < ActionDispatch::IntegrationTest
   def setup
