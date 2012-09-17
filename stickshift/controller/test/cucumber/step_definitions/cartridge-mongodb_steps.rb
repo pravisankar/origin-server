@@ -1,5 +1,5 @@
 # step descriptions for MongoDB cartridge behavior.
-
+require 'rubygems'
 require 'mongo'
 require 'fileutils'
 

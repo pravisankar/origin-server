@@ -42,7 +42,9 @@ class PendingAppOpGroup
     pending_ops.where(:state.ne => :completed).select{|op| pending_ops.where(:_id.in => op.prereq, :state.ne => :completed).count == 0}
   end
   
-  def execute_rollback
+  def execute_rollback(result_io=nil)
+    result_io = ResultIO.new if result_io.nil?
+    
     while(pending_ops.where(:state => :completed).count > 0) do
       handle = RemoteJob.create_parallel_job
       parallel_job_ops = []
@@ -72,9 +74,9 @@ class PendingAppOpGroup
         when :new_component
           application.component_instances.delete(component_instance)
         when :add_component
-          gear.remove_component(component_instance)
+          result_io.append gear.remove_component(component_instance)
         when :create_gear
-          gear.destroy_gear
+          result_io.append gear.destroy_gear
           self.inc(:num_gears_rolled_back, 1)          
         when :register_dns          
           gear.deregister_dns
@@ -87,6 +89,10 @@ class PendingAppOpGroup
         when :set_gear_additional_filesystem_gb
           gear.set_addtl_fs_gb(op.saved_values["additional_filesystem_gb"], handle)          
           use_parallel_job = true
+        when :add_alias
+          result_io.append gear.remove_alias("abstract", op.args["fqdn"])
+        when :remove_alias
+          result_io.append gear.add_alias("abstract", op.args["fqdn"])
         end
         
         if use_parallel_job 
@@ -104,7 +110,8 @@ class PendingAppOpGroup
     end
   end
   
-  def execute
+  def execute(result_io=nil)
+    result_io = ResultIO.new if result_io.nil?
     begin
       while(pending_ops.where(:state.ne => :completed).count > 0) do
         handle = RemoteJob.create_parallel_job
@@ -144,28 +151,28 @@ class PendingAppOpGroup
           when :del_component
             application.component_instances.delete(component_instance)
           when :add_component
-            gear.add_component(component_instance)
+            result_io.append gear.add_component(component_instance)
           when :remove_component
-            gear.remove_component(component_instance)          
+            result_io.append gear.remove_component(component_instance)          
           when :create_gear
-            gear.create
+            result_io.append gear.create_gear
             self.inc(:num_gears_created, 1)
           when :register_dns          
             gear.register_dns
           when :deregister_dns          
             gear.deregister_dns          
           when :destroy_gear
-            gear.destroy_gear
+            result_io.append gear.destroy_gear
           when :start_component
-            gear.start(comp_name)
+            result_io.append gear.start(comp_name)
           when :stop_component
-            gear.stop(comp_name)
+            result_io.append gear.stop(comp_name)
           when :restart_component
-            gear.restart(comp_name)
+            result_io.append gear.restart(comp_name)
           when :reload_component_config
-            gear.reload_config(comp_name)
+            result_io.append gear.reload_config(comp_name)
           when :tidy_component
-            gear.tidy(comp_name)
+            result_io.append gear.tidy(comp_name)
           when :update_configuration
             gear.update_configuration(op.args,handle)
             use_parallel_job = true
@@ -183,6 +190,14 @@ class PendingAppOpGroup
           when :set_gear_additional_filesystem_gb
             gear.set_addtl_fs_gb(op.args["additional_filesystem_gb"], handle)
             use_parallel_job = true
+          when :add_alias
+            result_io.append gear.add_alias(op.args["fqdn"])
+            self.application.aliases.push(op.args["fqdn"])
+            self.application.save
+          when :remove_alias
+            result_io.append gear.remove_alias(op.args["fqdn"])            
+            self.application.aliases.delete(op.args["fqdn"])
+            self.application.save
           end
           
           if use_parallel_job 

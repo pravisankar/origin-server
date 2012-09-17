@@ -218,7 +218,7 @@ Then /^the response descriptor should have "([^\"]*)" as dependencies$/ do |deps
   #puts @response.body
   if @accept_type.upcase == "XML"
     page = Nokogiri::XML(@response.body)
-    desc_yaml = page.xpath("//response/data")
+    desc_yaml = page.xpath("//response/data/datum")
     desc = YAML.load(desc_yaml.text.to_s)
   elsif @accept_type.upcase == "JSON"
     page = JSON.parse(@response.body)

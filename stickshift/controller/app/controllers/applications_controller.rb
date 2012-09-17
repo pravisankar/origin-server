@@ -53,9 +53,12 @@ class ApplicationsController < BaseController
       return render_error(:unprocessable_entity, "The supplied application name '#{app_name}' already exists", 100, "ADD_APPLICATION", "name")
     end
 
-    application = Application.new(name: app_name, features: [feature], domain: domain)
-    if application.invalid?
-      messages = get_error_messages(application)
+    begin
+      application = Application.create_app(app_name, [feature], domain, "small", ResultIO.new)
+    rescue StickShift::UnfulfilledRequirementException => e
+      return render_error(:unprocessable_entity, "Unable to create application for #{e.feature}", 109, "ADD_APPLICATION", "cartridge")
+    rescue ApplicationValidationException => e
+      messages = get_error_messages(e.app)
       return render_error(:unprocessable_entity, nil, nil, "ADD_APPLICATION", nil, nil, messages)
     end
 

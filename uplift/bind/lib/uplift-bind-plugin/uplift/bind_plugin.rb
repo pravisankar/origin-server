@@ -8,10 +8,6 @@ module Uplift
   class BindPlugin < StickShift::DnsService
     @ss_dns_provider = Uplift::BindPlugin
 
-    # DEPENDENCIES
-    # Rails.application.config.ss[:domain_suffix]
-    # Rails.application.config.dns[...]
-
     attr_reader :server, :port, :keyname, :keyvalue
 
     def initialize(access_info = nil)

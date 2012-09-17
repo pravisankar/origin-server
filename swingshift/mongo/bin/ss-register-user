@@ -77,6 +77,10 @@ class Account < ActiveResource::Base
     error_data = JSON.parse(@remote_errors.response.body)
     error_data["messages"]
   end
+  
+  def to_json(*options)
+    self.attributes.to_json(*options)
+  end
 end
 
 acc = Account.new(:username => opt['username'], :password => opt['userpass'])

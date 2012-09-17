@@ -32,15 +32,19 @@ class DomainsController < BaseController
     namespace = params[:id]
     Rails.logger.debug "Creating domain with namespace #{namespace}"
 
+    if Domain.where(namespace: namespace).count > 0
+      return render_error(:unprocessable_entity, "Namespace '#{namespace}' is already in use. Please choose another.", 103, "ADD_DOMAIN", "id")
+    end
+
+    if Domain.where(owner: @cloud_user).count > 0
+      return render_error(:conflict, "There is already a namespace assocaited with this user", 103, "ADD_DOMAIN", "id")
+    end
+
     domain = Domain.new(namespace: namespace, owner: @cloud_user, users: [@cloud_user._id])
     if not domain.valid?
       Rails.logger.error "Domain is not valid"
       messages = get_error_messages(domain, {"namespace" => "id"})
       return render_error(:unprocessable_entity, nil, nil, "ADD_DOMAIN", nil, nil, messages)
-    end
-
-    if Domain.where(namespace: namespace).count > 0
-      return render_error(:unprocessable_entity, "Namespace '#{namespace}' is already in use. Please choose another.", 103, "ADD_DOMAIN", "id")
     end
 
     begin
@@ -62,18 +66,18 @@ class DomainsController < BaseController
     rescue Mongoid::Errors::DocumentNotFound
       return render_error(:not_found, "Domain '#{id}' not found", 127, "UPDATE_DOMAIN")
     end
+    
+    if Domain.where(namespace: new_namespace).count > 0
+      return render_error(:unprocessable_entity, "Namespace '#{new_namespace}' is already in use. Please choose another.", 106, "UPDATE_DOMAIN", "id")
+    end
 
-    domain.namespace = new_namespace
+    domain.update_namespace(new_namespace)
     if not domain.valid?
-      messages = get_error_messages(new_domain, "namespace", "id")
+      messages = get_error_messages(domain, {"namespace" => "id"})
       return render_error(:unprocessable_entity, nil, nil, "UPDATE_DOMAIN", nil, nil, messages)
     end
 
     Rails.logger.debug "Updating domain #{domain.namespace} to #{new_namespace}"
-
-    if Domain.where(namespace: new_namespace).count > 0
-      return render_error(:unprocessable_entity, "Namespace '#{namespace}' is already in use. Please choose another.", 103, "UPDATE_DOMAIN", "id")
-    end
 
     begin
       domain.save
@@ -99,7 +103,7 @@ class DomainsController < BaseController
     if force
       
     elsif not domain.applications.empty?
-      app = @cloud_user.applications.first
+      app = domain.applications.first
       return render_error(:bad_request, "Domain contains applications. Delete applications first or set force to true.", 128, "DELETE_DOMAIN")
     end
 
