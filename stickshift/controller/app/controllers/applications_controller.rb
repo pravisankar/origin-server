@@ -59,14 +59,10 @@ class ApplicationsController < BaseController
       return render_error(:unprocessable_entity, nil, nil, "ADD_APPLICATION", nil, nil, messages)
     end
 
-    if application.run_jobs
-      app = RestApplication.new(application, get_url, nolinks)
-      reply = RestReply.new( :created, "application", app)
-      message = Message.new(:info, "Application #{application.name} was created.")
-      render_success(:created, "application", app, "ADD_APPLICATION", nil, nil, nil, [message]) 
-    else
-      render_success(:accepted, "application", app, "ADD_APPLICATION", "Delayed setup for application #{app_name} under domain #{domain_id}", true, :info)
-    end
+   app = RestApplication.new(application, get_url, nolinks)
+   reply = RestReply.new( :created, "application", app)
+   message = Message.new(:info, "Application #{application.name} was created.")
+   render_success(:created, "application", app, "ADD_APPLICATION", nil, nil, nil, [message]) 
   end
   
   # DELELTE domains/[domain_id]/applications/[id]
@@ -89,13 +85,6 @@ class ApplicationsController < BaseController
     
     # create tasks to delete gear groups
     application.destroy_app
-    
-    # execute the tasks
-    if application.run_jobs
-      application.destroy
-      render_success(:no_content, nil, nil, "DELETE_APPLICATION", "Application #{id} is deleted.", true) 
-    else
-      render_success(:accepted, "application", app, "DELETE_APPLICATION", "Delayed deletion for application #{app_name} under domain #{domain_id}", true, :info)
-    end
+    render_success(:no_content, nil, nil, "DELETE_APPLICATION", "Application #{id} is deleted.", true) 
   end
 end

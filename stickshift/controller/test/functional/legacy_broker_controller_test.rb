@@ -1,4 +1,5 @@
-require 'test_helper'
+ENV["TEST_NAME"] = "LegacyBrokerControllerTest"
+require "test_helper"
 
 class LegacyBrokerControllerTest < ActionController::TestCase
 
@@ -7,8 +8,6 @@ class LegacyBrokerControllerTest < ActionController::TestCase
     Rails.cache.clear
     Rails.configuration.action_controller.perform_caching = true
     
-    Application.expects(:get_available_cartridges).returns(['php-5.3', 'python-2.6'])
-
     # should be a cache miss
     resp = post(:cart_list_post, {:json_data => '{"cart_type" : "standalone"}'})
     assert_equal 200, resp.status
@@ -20,6 +19,7 @@ class LegacyBrokerControllerTest < ActionController::TestCase
     body2 = resp.body
 
     assert body1 == body2
+    Rails.cache.clear
   end
 
   test "embedded cart list" do
@@ -27,8 +27,6 @@ class LegacyBrokerControllerTest < ActionController::TestCase
     Rails.cache.clear
     Rails.configuration.action_controller.perform_caching = true
     
-    Application.expects(:get_available_cartridges).returns(['mysql-5.1', 'phpmyadmin-3.4'])
-
     # should be a cache miss
     resp = post(:cart_list_post, {:json_data => '{"cart_type" : "embedded"}'})
     assert_equal 200, resp.status
@@ -40,6 +38,7 @@ class LegacyBrokerControllerTest < ActionController::TestCase
     body2 = resp.body
 
     assert body1 == body2
+    Rails.cache.clear
   end
 
 end

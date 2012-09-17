@@ -47,7 +47,7 @@ class RestCartridge11 < StickShift::Model
     if app and !nolinks
       domain_id = app.domain.namespace
       app_id = app.name
-      if type == "embedded" and not app_id.nil? and not domain_id.nil?
+      if self.type == "embedded" and not app_id.nil? and not domain_id.nil?
         self.links = {
             "GET" => Link.new("Get embedded cartridge", "GET", URI::join(url, "domains/#{domain_id}/applications/#{app_id}/cartridges/#{name}")),
             "START" => Link.new("Start embedded cartridge", "POST", URI::join(url, "domains/#{domain_id}/applications/#{app_id}/cartridges/#{name}/events"), [

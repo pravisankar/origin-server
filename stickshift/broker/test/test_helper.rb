@@ -1,17 +1,10 @@
 ENV["RAILS_ENV"] = "test"
+ENV['COVERAGE'] = 'true'
+
 require File.expand_path('../../config/environment', __FILE__)
 require 'rails/test_help'
-require 'mocha'
 
-class ActiveSupport::TestCase
-  # Setup all fixtures in test/fixtures/*.(yml|csv) for all tests in alphabetical order.
-  #
-  # Note: You'll currently still have to declare fixtures explicitly in integration tests
-  # -- they do not yet inherit this setting
-  fixtures :all
-
-  # Add more helper methods to be used by all tests here...
-end
+@engines = Rails.application.railties.engines.map { |e| e.config.root.to_s }
 
 def gen_uuid
   %x[/usr/bin/uuidgen].gsub('-', '').strip 
