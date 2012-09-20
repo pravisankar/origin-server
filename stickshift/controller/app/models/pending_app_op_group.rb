@@ -25,11 +25,13 @@ class PendingAppOpGroup
   field :num_gears_rolled_back, type: Integer, default: 0
   
   def initialize(attrs = nil, options = nil)
+    parent_opid = nil
     if !attrs.nil? and attrs.has_key?(:parent_op)
-      self.parent_op_id = attrs[:parent_op]._id 
+      parent_opid = attrs[:parent_op]._id 
       attrs.delete(:parent_op)
     end
     super
+    self.parent_op_id = parent_opid 
   end
   
   def eligible_rollback_ops

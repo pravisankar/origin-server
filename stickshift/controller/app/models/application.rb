@@ -130,7 +130,7 @@ class Application
   def update_namespace(old_namespace, new_namespace, parent_op=nil)
     Application.run_in_application_lock(self) do
       result_io = ResultIO.new
-      op_group = PendingAppOpGroup.new(op_name: :update_namespace, args: {"old_namespace" => old_namespace, "new_namespace" => new_namespace}, parent_op: parent_op)
+      op_group = PendingAppOpGroup.new(op_type: :update_namespace, args: {"old_namespace" => old_namespace, "new_namespace" => new_namespace}, parent_op: parent_op)
       self.pending_op_groups.push op_group
       self.run_jobs(result_io)
       result_io
@@ -140,7 +140,7 @@ class Application
   def complete_update_namespace(old_namespace, new_namespace, parent_op=nil)
     Application.run_in_application_lock(self) do
       result_io = ResultIO.new
-      op_group = PendingAppOpGroup.new(op_name: :complete_update_namespace, args: {"old_namespace" => old_namespace, "new_namespace" => new_namespace}, parent_op: parent_op)
+      op_group = PendingAppOpGroup.new(op_type: :complete_update_namespace, args: {"old_namespace" => old_namespace, "new_namespace" => new_namespace}, parent_op: parent_op)
       self.pending_op_groups.push op_group
       self.run_jobs(result_io)
       result_io
@@ -161,7 +161,7 @@ class Application
   def remove_namespace(old_namespace, parent_op=nil)
     Application.run_in_application_lock(self) do
       result_io = ResultIO.new
-      op_group = PendingAppOpGroup.new(op_name: :remove_namespace, args: {"old_namespace" => old_namespace}, parent_op: parent_op)
+      op_group = PendingAppOpGroup.new(op_type: :remove_namespace, args: {"old_namespace" => old_namespace}, parent_op: parent_op)
       self.pending_op_groups.push op_group
       self.run_jobs(result_io)
       result_io
@@ -191,7 +191,7 @@ class Application
       k
     }
     Application.run_in_application_lock(self) do
-      op_group = PendingAppOpGroup.new(op_name: :update_configuration,  args: {"add_keys_attrs" => key_attrs}, parent_op: parent_op)
+      op_group = PendingAppOpGroup.new(op_type: :update_configuration,  args: {"add_keys_attrs" => key_attrs}, parent_op: parent_op)
       self.pending_op_groups.push op_group
       result_io = ResultIO.new
       self.run_jobs(result_io)
@@ -218,7 +218,7 @@ class Application
       k
     }
     Application.run_in_application_lock(self) do
-      op_group = PendingAppOpGroup.new(op_name: :update_ssh_keys, args: {"keys" => keys_attrs}, parent_op: parent_op)
+      op_group = PendingAppOpGroup.new(op_type: :update_ssh_keys, args: {"keys" => keys_attrs}, parent_op: parent_op)
       self.pending_op_groups.push op_group
       result_io = ResultIO.new
       self.run_jobs(result_io)
@@ -250,7 +250,7 @@ class Application
       k
     }
     Application.run_in_application_lock(self) do
-      op_group = PendingAppOpGroup.new(op_name: :update_configuration, args: {"remove_keys_attrs" => key_attrs}, parent_op: parent_op)
+      op_group = PendingAppOpGroup.new(op_type: :update_configuration, args: {"remove_keys_attrs" => key_attrs}, parent_op: parent_op)
       self.pending_op_groups.push op_group
       result_io = ResultIO.new
       self.run_jobs(result_io)
@@ -260,7 +260,7 @@ class Application
 
   def add_env_variables(vars, parent_op=nil)
     Application.run_in_application_lock(self) do
-      op_group = PendingAppOpGroup.new(op_name: :update_configuration, args: {"add_env_variables" => vars}, parent_op: parent_op)
+      op_group = PendingAppOpGroup.new(op_type: :update_configuration, args: {"add_env_variables" => vars}, parent_op: parent_op)
       self.pending_op_groups.push op_group
       result_io = ResultIO.new
       self.run_jobs(result_io)
@@ -270,7 +270,7 @@ class Application
 
   def remove_env_variables(vars, parent_op=nil)
     Application.run_in_application_lock(self) do
-      op_group = PendingAppOpGroup.new(op_name: :update_configuration, args: {"remove_env_variables" => vars}, parent_op: parent_op)
+      op_group = PendingAppOpGroup.new(op_type: :update_configuration, args: {"remove_env_variables" => vars}, parent_op: parent_op)
       self.pending_op_groups.push op_group
       result_io = ResultIO.new
       self.run_jobs(result_io)
@@ -934,7 +934,7 @@ class Application
       args["cartridge"] = "abstract"
       group_instance.gears.each do |gear|
         args["gear_id"] = gear._id.to_s
-        ops.push(PendingAppOp.new(op_type: :update_namespace, args: args.dup, prereq: prereq))
+        ops.push(PendingAppOp.new(op_type: :update_namespace, args: args.dup, prereq: prereqs))
       end
     end
     ops
