@@ -10,7 +10,7 @@ class UsageRecord
                   :addtl_fs_gb => "ADDTL_FS_GB" }
 
   field :event, type: String
-  field :sync_time, type: DateTime
+  field :sync_time, type: Time
   embedded_in :application
   field :usage_type, type: String  
   field :gear_uuid, type: Moped::BSON::ObjectId
