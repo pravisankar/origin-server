@@ -13,6 +13,10 @@ Requires:       rubygem-json
 Requires:       rubygem-stickshift-node
 Requires:       mcollective
 Requires:       facter
+%if 0%{?fedora}%{?rhel} <= 6
+Requires:       ruby193-mcollective-common
+Requires:       ruby193-facter
+%endif
 BuildArch:      noarch
 
 %description

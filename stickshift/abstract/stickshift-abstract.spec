@@ -30,6 +30,9 @@ Requires:  lsof
 Requires:  ruby
 Requires:  rubygems
 Requires:  rubygem(json)
+%if 0%{?fedora}%{?rhel} <= 6
+Requires:       ruby193-facter
+%endif
 
 %description
 This contains the common function used while building cartridges.

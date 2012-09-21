@@ -9,6 +9,10 @@ Source0:        %{name}-%{version}.tar.gz
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 Requires:       mcollective
 Requires:       ruby-qpid-qmf
+%if 0%{?fedora}%{?rhel} <= 6
+Requires:       ruby193-mcollective-common
+Requires:       ruby193-qpid-qmf
+%endif
 BuildArch:      noarch
 
 %description
