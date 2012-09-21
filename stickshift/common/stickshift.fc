@@ -1,8 +1,8 @@
 /var/lib/stickshift(/.*)? gen_context(system_u:object_r:stickshift_file_t,s0)
 
-/var/lib/stickshift/.httpd.d(/.*)? gen_context(system_u:object_r:httpd_config_t,s0)
+/var/lib/stickshift/\.httpd\.d(/.*)? gen_context(system_u:object_r:httpd_config_t,s0)
 
-/etc/httpd/conf.d/stickshift gen_context(system_u:object_r:httpd_config_t,s0)
+/etc/httpd/conf\.d/stickshift gen_context(system_u:object_r:httpd_config_t,s0)
 
 /usr/sbin/mcollectived		--	gen_context(system_u:object_r:mcollectived_exec_t,s0)
 
