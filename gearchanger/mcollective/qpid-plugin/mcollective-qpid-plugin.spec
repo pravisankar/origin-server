@@ -11,7 +11,7 @@ Requires:       mcollective
 Requires:       ruby-qpid-qmf
 %if 0%{?fedora}%{?rhel} <= 6
 Requires:       ruby193-mcollective-common
-Requires:       ruby193-qpid-qmf
+Requires:       ruby193-ruby-qpid-qmf
 %endif
 BuildArch:      noarch
 
