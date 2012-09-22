@@ -34,11 +34,16 @@ class ComponentInstance
       self.save
     end
   end
-  
+
   def get_feature
-    cart = CartridgeCache.find_cartridge self.cartridge_name
-    prof = cart.get_profile_for_component self.component_name
+    cart = get_cartridge
+    prof = get_profile
     (prof.provides.length > 0 && prof.name != cart.default_profile) ? prof.provides.first : cart.provides.first
+  end
+
+  def get_profile
+    cart = get_cartridge
+    prof = cart.get_profile_for_component self.component_name
   end
 
   def get_cartridge

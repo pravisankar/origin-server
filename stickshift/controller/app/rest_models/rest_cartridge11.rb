@@ -1,9 +1,12 @@
 class RestCartridge11 < StickShift::Model
 
   attr_accessor :type, :name, :version, :license, :license_url, :tags, :website, :suggests, :requires, :conflicts, :provides,
-    :help_topics, :links, :properties, :display_name, :description, :scales_with, :status_messages
+    :help_topics, :links, :properties, :display_name, :description, :scales_from, 
+    :scales_to, :current_scale, :supported_scales_from, :supported_scales_to, 
+    :scales_with, :base_gear_storage, :additional_gear_storage, :gear_size, :collocated_with, 
+    :status_messages
 
-  def initialize(type, cart, app, cinst, url, nolinks=false)
+  def initialize(type, cart, comp, app, cinst, colocated_cinsts, scale, url, nolinks=false)
     self.name = cart.name
     self.status_messages = status_messages
     self.version = cart.version
@@ -18,6 +21,19 @@ class RestCartridge11 < StickShift::Model
     self.conflicts = cart.conflicts
     self.type = "standalone"
     self.type = "embedded" if cart.categories.include? "embedded"
+
+    self.scales_from = scale[:min]
+    self.scales_to = scale[:max]
+    self.current_scale = scale[:current]
+    self.scales_from = self.scales_to = self.current_scale = 1 if cinst.is_singleton?
+
+    self.gear_size = scale[:gear_size]
+    self.base_gear_storage = Gear.base_filesystem_gb(self.gear_size)
+    self.additional_gear_storage = scale[:additional_storage]
+
+    self.collocated_with = colocated_cinsts.map{ |c| c.cartridge_name }
+    self.supported_scales_from = comp.scaling.min
+    self.supported_scales_to = comp.scaling.max
 
     if app.nil?
       self.provides = cart.features

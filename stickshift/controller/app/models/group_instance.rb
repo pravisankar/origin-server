@@ -18,15 +18,11 @@
 class GroupInstance
   include Mongoid::Document
   embedded_in :application, class_name: Application.name
-  
-  field :min, type: Integer, default: 1
-  field :max, type: Integer, default: -1
-  field :user_min, type: Integer, default: 1
-  field :user_max, type: Integer, default: -1
-
   field :gear_size, type: String, default: "small"
   field :addtl_fs_gb, type: Integer, default: 0
   embeds_many :gears, class_name: Gear.name
+  
+  attr_accessor :min, :max
   
   # Initializes the application
   #

@@ -13,7 +13,7 @@ Rails.application.routes.draw do
       resources :applications, :constraints => { :id => /[\w]+/ } do
         resource :descriptor, :only => [:show]
         resources :gear_groups, :only => [:index, :show]
-        patch 'gear_groups/:id', :to => 'gear_groups#update'
+        patch 'cartridges/:id', :to => 'app_cart#update_scale', :id => /([\w\-]+(-)([\d]+(\.[\d]+)*)+)/
         resources :cartridges, :controller => :app_cart, :only => [:index, :show, :create, :destroy], :constraints => { :id => /([\w\-]+(-)([\d]+(\.[\d]+)*)+)/ } do
           resources :events, :controller => :app_cart_events, :only => [:create]
         end
