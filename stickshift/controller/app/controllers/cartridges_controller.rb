@@ -15,6 +15,6 @@ class CartridgesController < BaseController
       cartridges = CartridgeCache.cartridges.keep_if{ |c| c.categories.include?(type) }
     end
     
-    render_success(:ok, "cartridges", cartridges.map{|c| RestCartridge11.new(nil,c,nil,nil,get_url,nolinks)}, "LIST_CARTRIDGES", "List #{type.nil? ? 'all' : type} cartridges") 
+    render_success(:ok, "cartridges", cartridges.map{|c| RestCartridge11.new(nil,c,nil,nil,nil,nil,get_url,nolinks)}, "LIST_CARTRIDGES", "List #{type.nil? ? 'all' : type} cartridges") 
   end
 end

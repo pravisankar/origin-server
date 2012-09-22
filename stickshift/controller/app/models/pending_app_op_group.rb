@@ -80,8 +80,11 @@ class PendingAppOpGroup
           self.inc(:num_gears_rolled_back, 1)          
         when :register_dns          
           gear.deregister_dns
+        when :set_group_overrides
+          application.group_overrides=op.saved_values["group_overrides"]
+          application.save
         when :set_connections
-          application.set_connections(op.saved_values["connections"])          
+          application.set_connections(op.saved_values["connections"])
         when :execute_connections
           application.execute_connections
         when :set_additional_filesystem_gb
@@ -181,6 +184,9 @@ class PendingAppOpGroup
             use_parallel_job = true
           when :complete_update_namespace
             component_instance.complete_update_namespace(op.args)
+          when :set_group_overrides
+            application.group_overrides=op.args["group_overrides"]
+            application.save
           when :set_connections
             application.set_connections(op.args["connections"])
           when :execute_connections
