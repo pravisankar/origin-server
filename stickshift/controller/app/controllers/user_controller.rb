@@ -8,7 +8,7 @@ class UserController < BaseController
     if $requested_api_version >= 1.2
       render_success(:ok, "user", RestUser12.new(@cloud_user, get_url, nolinks), "SHOW_USER")
     else
-      render_success(:ok, "user", RestUser11.new(@cloud_user, get_url, nolinks), "SHOW_USER")
+      render_success(:ok, "user", RestUser10.new(@cloud_user, get_url, nolinks), "SHOW_USER")
     end
   end
     
@@ -30,7 +30,7 @@ class UserController < BaseController
         end if domain.applications.count > 0
         domain.delete
       end if @cloud_user.domains.count > 0
-    elsif @cloud_user.domains.count == 0
+    elsif @cloud_user.domains.count > 0
       return render_error(:unprocessable_entity, "User '#{@login}' has valid domains. Either delete domains and retry the operation or use 'force' option.", 139, "DELETE_USER")
     end
   
