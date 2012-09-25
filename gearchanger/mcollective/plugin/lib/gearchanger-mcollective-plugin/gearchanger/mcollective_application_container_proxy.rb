@@ -659,14 +659,14 @@ module GearChanger
       
       def move_gear_post(app, gear, destination_container, state_map)
         reply = ResultIO.new
+        gi = gear.group_instance
+        gear_components = gi.all_component_instances
+        start_order, stop_order = app.calculate_component_orders
         source_container = gear.container
-        gi = app.group_instance_map[gear.group_instance_name]
-        app.start_order.each do |ci_name|
-          next if not gi.component_instances.include? ci_name
-          cinst = app.comp_instance_map[ci_name]
-          cart = cinst.parent_cart_name
-          next if cart==app.name
-          idle, leave_stopped = state_map[ci_name]
+        start_order.each do |cinst|
+          next if not gear_components.include? cinst
+          cart = cinst.cartridge_name
+          idle, leave_stopped = state_map[cart]
           unless leave_stopped
             log_debug "DEBUG: Starting cartridge '#{cart}' in '#{app.name}' after move on #{destination_container.id}"
             reply.append destination_container.send(:run_cartridge_command, cart, app, gear, "start", nil, false)
@@ -677,24 +677,21 @@ module GearChanger
         log_debug "DEBUG: Changing server identity of '#{gear.name}' from '#{source_container.id}' to '#{destination_container.id}'"
         gear.server_identity = destination_container.id
         gear.container = destination_container
-        if app.scalable and not gi.component_instances.include? app.proxy_cartridge
-          dns = StickShift::DnsService.instance
-          begin
-            public_hostname = destination_container.get_public_hostname
-            dns.modify_application(gear.name, app.domain.namespace, public_hostname)
-            dns.publish
-          ensure
-            dns.close
+        if gear.app_dns and app.aliases
+          app.aliases.each do |server_alias|
+            gi.singleton_instances.each { |singleton_cinst|
+              cart = singleton_cinst.cartridge_name
+              reply.append destination_container.send(:run_cartridge_command, cart, app, gear, "add-alias", server_alias, false)
+            }
           end
         end
-
-        if (not app.scalable) or (app.scalable and gi.component_instances.include? app.proxy_cartridge)
-          unless app.aliases.nil?
-            app.aliases.each do |server_alias|
-              reply.append destination_container.send(:run_cartridge_command, app.framework, app, app.gear, "add-alias", server_alias, false)
-            end
-          end
-          app.recreate_dns
+        dns = StickShift::DnsService.instance
+        begin
+          public_hostname = destination_container.get_public_hostname
+          dns.modify_application(gear.name, app.domain.namespace, public_hostname)
+          dns.publish
+        ensure
+          dns.close
         end
 
         reply
@@ -702,14 +699,14 @@ module GearChanger
 
       def move_gear_pre(app, gear, state_map, keep_uid)
         reply = ResultIO.new
+        start_order, stop_order = app.calculate_component_orders
         source_container = gear.container
-        gi = app.group_instance_map[gear.group_instance_name]
-        app.start_order.reverse.each { |ci_name|
-          next if not gi.component_instances.include? ci_name
-          cinst = app.comp_instance_map[ci_name]
-          cart = cinst.parent_cart_name
-          next if cart==app.name
-          idle, leave_stopped = state_map[ci_name]
+        gi = gear.group_instance
+        gear_components = gi.all_component_instances
+        stop_order.each { |cinst|
+          next if not gear_components.include? cinst
+          cart = cinst.cartridge_name
+          idle, leave_stopped = state_map[cart]
           # stop the cartridge if it needs to
           unless leave_stopped
             log_debug "DEBUG: Stopping existing app cartridge '#{cart}' before moving"
@@ -725,7 +722,7 @@ module GearChanger
           end
           # execute pre_move
           if embedded_carts.include? cart and not keep_uid
-            if (app.scalable and not cart.include? app.proxy_cartridge) or not app.scalable
+            if not cinst.is_singleton?
               log_debug "DEBUG: Performing cartridge level pre-move for embedded #{cart} for '#{app.name}' on #{source_container.id}"
               reply.append source_container.send(:run_cartridge_command, "embedded/" + cart, app, gear, "pre-move", nil, false)
             end
@@ -736,16 +733,17 @@ module GearChanger
 
       def move_gear(app, gear, destination_container, destination_district_uuid, allow_change_district, node_profile)
         reply = ResultIO.new
+        gi = gear.group_instance
         state_map = {}
         gear.node_profile = node_profile if node_profile
         orig_uid = gear.uid
 
         # resolve destination_container according to district
-        destination_container, destination_district_uuid, keep_uid = resolve_destination(app, gear, destination_container, destination_district_uuid, allow_change_district)
+        destination_container, destination_district_uuid, keep_uid = resolve_destination(gear, destination_container, destination_district_uuid, allow_change_district)
 
         source_container = gear.container
         destination_node_profile = destination_container.get_node_profile
-        if app.scalable and source_container.get_node_profile != destination_node_profile
+        if (not gi.singleton_instances.empty?) and source_container.get_node_profile != destination_node_profile
           log_debug "Cannot change node_profile for a gear belonging to a scalable application. The destination container's node profile is #{destination_node_profile}, while the gear's node_profile is #{gear.node_profile}"
           raise StickShift::UserException.new("Error moving app.  Cannot change node profile.", 1)
         end
@@ -754,13 +752,13 @@ module GearChanger
         quota_blocks = nil
         quota_files = nil
         idle, leave_stopped, quota_blocks, quota_files = get_app_status(app)
-        gi = app.group_instance_map[gear.group_instance_name]
-        gi.component_instances.each do |ci_name|
-          cinst = app.comp_instance_map[ci_name]
-          cart = cinst.parent_cart_name
-          next if cart == app.name
+        gear_components = gi.all_component_instances
+        configure_order = app.calculate_configure_order
+        start_order, stop_order = app.calculate_component_orders
+        gear_components.each do |cinst|
+          cart = cinst.cartridge_name
           # idle, leave_stopped, quota_blocks, quota_files = get_cart_status(app, gear, cart)
-          state_map[ci_name] = [idle, leave_stopped]
+          state_map[cart] = [idle, leave_stopped]
         end
 
         begin
@@ -772,59 +770,43 @@ module GearChanger
             rsync_destination_container(app, gear, destination_container, destination_district_uuid, quota_blocks, quota_files, keep_uid)
 
             # now execute 'move'/'expose-port' hooks on the new nest of the components
-            app.configure_order.each do |ci_name|
-              next if not gi.component_instances.include? ci_name
-              cinst = app.comp_instance_map[ci_name]
-              cart = cinst.parent_cart_name
-              next if cart == app.name
-              idle, leave_stopped = state_map[ci_name]
-              if embedded_carts.include? cart 
-                if app.scalable and cart.include? app.proxy_cartridge
-                  log_debug "DEBUG: Performing cartridge level move for '#{cart}' on #{destination_container.id}"
-                  reply.append destination_container.send(:run_cartridge_command, cart, app, gear, "move", idle ? '--idle' : nil, false)
-                else
-                  log_debug "DEBUG: Performing cartridge level move for embedded #{cart} for '#{app.name}' on #{destination_container.id}"
-                  embedded_reply = destination_container.send(:run_cartridge_command, "embedded/" + cart, app, gear, "move", nil, false)
-                  component_details = embedded_reply.appInfoIO.string
-                  unless component_details.empty?
-                    app.set_embedded_cart_info(cart, component_details)
-                  end
-                  reply.append embedded_reply
-                  unless keep_uid
-                    log_debug "DEBUG: Performing cartridge level post-move for embedded #{cart} for '#{app.name}' on #{destination_container.id}"
-                    reply.append destination_container.send(:run_cartridge_command, "embedded/" + cart, app, gear, "post-move", nil, false)
-                  end
+            configure_order.each do |cinst|
+              next if not gear_components.include? cinst
+              cart = cinst.cartridge_name
+              idle, leave_stopped = state_map[cart]
+              if embedded_carts.include? cart and not cinst.is_singleton?
+                log_debug "DEBUG: Performing cartridge level move for embedded #{cart} for '#{app.name}' on #{destination_container.id}"
+                embedded_reply = destination_container.send(:run_cartridge_command, "embedded/" + cart, app, gear, "move", nil, false)
+                # component_details = embedded_reply.appInfoIO.string
+                cinst.process_properties(embedded_reply)
+                reply.append embedded_reply
+                unless keep_uid
+                  log_debug "DEBUG: Performing cartridge level post-move for embedded #{cart} for '#{app.name}' on #{destination_container.id}"
+                  reply.append destination_container.send(:run_cartridge_command, "embedded/" + cart, app, gear, "post-move", nil, false)
                 end
-              end
-              if framework_carts.include? cart
+              else
+                # cartridge is either framework or singleton
                 log_debug "DEBUG: Performing cartridge level move for '#{cart}' on #{destination_container.id}"
                 reply.append destination_container.send(:run_cartridge_command, cart, app, gear, "move", idle ? '--idle' : nil, false)
               end
-              if app.scalable and not cart.include? app.proxy_cartridge
-                begin
-                  reply.append destination_container.expose_port(app, gear, cinst.parent_cart_name)
-                rescue Exception=>e
-                  # just pass because some embedded cartridges do not have expose-port hook implemented (e.g. jenkins-client)
-                end
+              begin
+                reply.append destination_container.expose_port(app, gear, cinst.cartridge_name) 
+              rescue Exception=>e
+                # just pass because some embedded cartridges do not have expose-port hook implemented (e.g. jenkins-client)
               end
             end 
 
             # start the gears again and change DNS entry
             reply.append move_gear_post(app, gear, destination_container, state_map)
-            app.elaborate_descriptor
             app.execute_connections
-            if app.scalable
-              # execute connections restart the haproxy service, so stop it explicitly if needed
-              app.start_order.reverse.each do |ci_name|
-                next if not gi.component_instances.include? ci_name
-                cinst = app.comp_instance_map[ci_name]
-                cart = cinst.parent_cart_name
-                next if cart==app.name
-                idle, leave_stopped = state_map[ci_name]
-                if leave_stopped and cart.include? app.proxy_cartridge
-                  log_debug "DEBUG: Explicitly stopping cartridge '#{cart}' in '#{app.name}' after move on #{destination_container.id}"
-                  reply.append destination_container.stop(app, gear, cart)
-                end
+            # execute connections restart the haproxy service, so stop it explicitly if needed
+            stop_order.each do |cinst|
+              next if not gear_components.include? cinst
+              cart = cinst.cartridge_name
+              idle, leave_stopped = state_map[cart]
+              if leave_stopped 
+                log_debug "DEBUG: Explicitly stopping cartridge '#{cart}' in '#{app.name}' after move on #{destination_container.id}"
+                reply.append destination_container.stop(app, gear, cart)
               end
             end
             if gear.node_profile != destination_node_profile
@@ -841,10 +823,8 @@ module GearChanger
             gear.container = source_container
             # remove-httpd-proxy of destination
             log_debug "DEBUG: Moving failed.  Rolling back gear '#{gear.name}' '#{app.name}' with remove-httpd-proxy on '#{destination_container.id}'"
-            gi.component_instances.each do |ci_name|
-              cinst = app.comp_instance_map[ci_name]
-              cart = cinst.parent_cart_name
-              next if cart == app.name
+            gear_components.each do |cinst|
+              cart = cinst.cartridge_name
               if framework_carts.include? cart
                 begin
                   reply.append destination_container.send(:run_cartridge_command, cart, app, gear, "remove-httpd-proxy", nil, false)
@@ -862,12 +842,10 @@ module GearChanger
           begin
             unless keep_uid
               # post_move source
-              gi.component_instances.each do |ci_name|
-                cinst = app.comp_instance_map[ci_name]
-                cart = cinst.parent_cart_name
-                next if cart==app.name
-                proxy_cart = (app.proxy_cartridge or "")
-                if embedded_carts.include? cart and not cart.include? proxy_cart
+              start_order.each do |cinst|
+                next if not gear_components.include? cinst
+                cart = cinst.cartridge_name
+                if embedded_carts.include? cart and not cinst.is_singleton?
                   begin
                     log_debug "DEBUG: Performing cartridge level post-move for embedded #{cart} for '#{app.name}' on #{source_container.id}"
                     reply.append source_container.send(:run_cartridge_command, "embedded/" + cart, app, gear, "post-move", nil, false)
@@ -878,11 +856,10 @@ module GearChanger
               end
             end
             # start source
-            gi.component_instances.each do |ci_name|
-              cinst = app.comp_instance_map[ci_name]
-              cart = cinst.parent_cart_name
-              next if cart==app.name
-              idle, leave_stopped = state_map[ci_name]
+            start_order.each do |cinst|
+              next if not gear_components.include? cinst
+              cart = cinst.cartridge_name
+              idle, leave_stopped = state_map[cart]
               if not leave_stopped
                 reply.append source_container.run_cartridge_command(cart, app, gear, "start", nil, false) if framework_carts.include? cart
               end
@@ -910,7 +887,7 @@ module GearChanger
         reply
       end
 
-      def resolve_destination(app, gear, destination_container, destination_district_uuid, allow_change_district)
+      def resolve_destination(gear, destination_container, destination_district_uuid, allow_change_district)
         source_container = gear.container
         source_container = gear.get_proxy if source_container.nil? 
         source_district_uuid = source_container.get_district_uuid
