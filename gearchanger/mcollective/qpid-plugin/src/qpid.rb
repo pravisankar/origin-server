@@ -145,9 +145,9 @@ module MCollective
           when :request
             suffix = :command
           when :direct_request
-            raise("Driect request not supported")
+            raise("Direct request not supported")
           when :directed
-            raise("Driected not supported")            
+            raise("Directed not supported")            
         end
 
         ["#{collective}", agent, suffix].compact.join(".")
@@ -190,7 +190,7 @@ module MCollective
       private
 
       # looks for a config option, accepts an optional default
-      # raises an exception when it cant find a value anywhere
+      # raises an exception when it can't find a value anywhere
       def get_option(opt, default=nil, allow_nil=true)
         return @config.pluginconf[opt] if @config.pluginconf.include?(opt)
         return default if (default or allow_nil)
