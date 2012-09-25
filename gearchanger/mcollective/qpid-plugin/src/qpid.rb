@@ -69,6 +69,7 @@ module MCollective
           @connection.open
         rescue StandardError => e
           Log.error("Initial connection failed... retrying")
+          Log.error(e.backtrace.inspect)
           sleep 5
           retry
         end
