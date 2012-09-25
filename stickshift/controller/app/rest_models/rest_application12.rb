@@ -1,4 +1,4 @@
-class RestApplication < StickShift::Model
+class RestApplication12 < StickShift::Model
   attr_accessor :framework, :creation_time, :uuid, :embedded, :aliases, :name, :gear_count, :links, :domain_id, :git_url, :app_url, :ssh_url,
    :building_with, :building_app, :build_job_url, :scalable, :health_check_path, :gear_profile
 

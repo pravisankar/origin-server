@@ -15,9 +15,9 @@ class ApplicationsController < BaseController
     apps = domain.applications.map! { |application| 
       app = nil
       if $requested_api_version >= 1.2
-        app = RestApplication.new(application, get_url, nolinks)
+        app = RestApplication12.new(application, get_url, nolinks)
       else
-        app = RestApplication11.new(application, get_url, nolinks)
+        app = RestApplication10.new(application, get_url, nolinks)
       end
       app
     }
@@ -38,9 +38,9 @@ class ApplicationsController < BaseController
     begin
       application = Application.find_by(domain: domain, name: id)
       if $requested_api_version >= 1.2
-        app = RestApplication.new(application, get_url, nolinks)
+        app = RestApplication12.new(application, get_url, nolinks)
       else
-        app = RestApplication11.new(application, get_url, nolinks)
+        app = RestApplication10.new(application, get_url, nolinks)
       end
       render_success(:ok, "application", app, "SHOW_APPLICATION", "Application '#{id}' found")
     rescue Mongoid::Errors::DocumentNotFound
@@ -75,9 +75,9 @@ class ApplicationsController < BaseController
     end
 
    if $requested_api_version >= 1.2
-     app = RestApplication.new(application, get_url, nolinks)
+     app = RestApplication12.new(application, get_url, nolinks)
    else
-     app = RestApplication11.new(application, get_url, nolinks)
+     app = RestApplication10.new(application, get_url, nolinks)
    end
    reply = RestReply.new( :created, "application", app)
    message = Message.new(:info, "Application #{application.name} was created.")
