@@ -1,6 +1,6 @@
-class RestApplication < StickShift::Model
+class RestApplication11 < StickShift::Model
   attr_accessor :framework, :creation_time, :uuid, :embedded, :aliases, :name, :gear_count, :links, :domain_id, :git_url, :app_url, :ssh_url,
-   :building_with, :building_app, :build_job_url, :scalable, :health_check_path, :gear_profile
+   :building_with, :building_app, :build_job_url, :scalable, :health_check_path, :scale_min, :scale_max, :gear_profile
 
   def initialize(app, url, nolinks=false)
     self.embedded = {}
@@ -22,6 +22,7 @@ class RestApplication < StickShift::Model
 
     self.gear_profile = app.default_gear_size
     self.scalable = true
+    self.scale_min,self.scale_max = [1,-1]
 
     self.git_url = "ssh://#{app.ssh_uri}/~/git/#{@name}.git/"
     self.app_url = "http://#{app.fqdn}/"

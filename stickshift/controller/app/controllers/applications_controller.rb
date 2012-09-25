@@ -12,7 +12,15 @@ class ApplicationsController < BaseController
       return render_error(:not_found, "Domain '#{domain_id}' not found", 127, "LIST_APPLICATIONS")
     end
 
-    apps = domain.applications.map! { |application| RestApplication.new(application, get_url, nolinks) }
+    apps = domain.applications.map! { |application| 
+      app = nil
+      if $requested_api_version >= 1.2
+        app = RestApplication.new(application, get_url, nolinks)
+      else
+        app = RestApplication11.new(application, get_url, nolinks)
+      end
+      app
+    }
     render_success(:ok, "applications", apps, "LIST_APPLICATIONS", "Found #{apps.length} applications for domain '#{domain_id}'")
   end
   
@@ -29,7 +37,11 @@ class ApplicationsController < BaseController
     
     begin
       application = Application.find_by(domain: domain, name: id)
-      app = RestApplication.new(application, get_url, nolinks)
+      if $requested_api_version >= 1.2
+        app = RestApplication.new(application, get_url, nolinks)
+      else
+        app = RestApplication11.new(application, get_url, nolinks)
+      end
       render_success(:ok, "application", app, "SHOW_APPLICATION", "Application '#{id}' found")
     rescue Mongoid::Errors::DocumentNotFound
       return render_error(:not_found, "Application '#{id}' not found", 101, "SHOW_APPLICATION")
@@ -62,7 +74,11 @@ class ApplicationsController < BaseController
       return render_error(:unprocessable_entity, nil, nil, "ADD_APPLICATION", nil, nil, messages)
     end
 
-   app = RestApplication.new(application, get_url, nolinks)
+   if $requested_api_version >= 1.2
+     app = RestApplication.new(application, get_url, nolinks)
+   else
+     app = RestApplication11.new(application, get_url, nolinks)
+   end
    reply = RestReply.new( :created, "application", app)
    message = Message.new(:info, "Application #{application.name} was created.")
    render_success(:created, "application", app, "ADD_APPLICATION", nil, nil, nil, [message]) 

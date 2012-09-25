@@ -136,7 +136,7 @@ module GearChanger
             district_uuid = get_district_uuid unless district_uuid
           end
           if district_uuid && district_uuid != 'NONE'
-            reserved_uid = StickShift::DataStore.instance.reserve_district_uid(district_uuid)
+            reserved_uid = District::reserve_uid(district_uuid)
             raise StickShift::SSException.new("uid could not be reserved") unless reserved_uid
           end
         end
@@ -151,7 +151,7 @@ module GearChanger
             district_uuid = get_district_uuid unless district_uuid
           end
           if district_uuid && district_uuid != 'NONE'
-            StickShift::DataStore.instance.unreserve_district_uid(district_uuid, uid)
+            District::unreserve_uid(district_uuid, uid)
           end
         end
       end
@@ -164,7 +164,7 @@ module GearChanger
             district_uuid = get_district_uuid unless district_uuid
           end
           if district_uuid && district_uuid != 'NONE'
-            StickShift::DataStore.instance.inc_district_externally_reserved_uids_size(district_uuid)
+            District::inc_externally_reserved_uids_size(district_uuid)
           end
         end
       end

@@ -3,7 +3,6 @@ class District
   include Mongoid::Timestamps
 
   field :name, type: String
-  field :uuid, type: String
   field :gear_size, type: String
   field :externally_reserved_uids_size, type: Integer
   field :max_capacity, type: Integer
@@ -26,7 +25,6 @@ class District
   def initialize(attrs = nil, options = nil)
     super
     self.server_identities = {}
-    self.uuid = StickShift::Model.gen_uuid
     self.available_capacity = Rails.configuration.gearchanger[:districts][:max_capacity]
     self.available_uids = []
     self.available_uids.fill(0, Rails.configuration.gearchanger[:districts][:max_capacity]) {|i| i+Rails.configuration.gearchanger[:districts][:first_uid]}
@@ -36,15 +34,19 @@ class District
     self.active_server_identities_size = 0
     save
   end
-  
+
   def self.find_available(gear_size=nil)
-    valid_districts = District.where(:available_capacity.gt => 0, :gear_size => gear_size, :active_server_identities_size.gt => 0)
-    valid_districts.sort(["available_capacity", "descending"]).limit(1).next
+    valid_districts = District.where(:available_capacity.gte => 0, :gear_size => gear_size, :active_server_identities_size.gte => 0).find_all
+    valid_districts.sort { |x,y| x.available_capacity<y.available_capacity }.first
   end
   
+  def find_all()
+    District.where(nil).find_all.to_a
+  end
+
   def delete()
     if not server_identities.empty?
-      raise StickShift::SSException.new("Couldn't destroy district '#{uuid}' because it still contains nodes")
+      raise StickShift::SSException.new("Couldn't destroy district '#{name}' because it still contains nodes")
     end
     super
   end
@@ -59,7 +61,7 @@ class District
           if capacity == 0
             container_node_profile = container.get_node_profile
             if container_node_profile == node_profile 
-              container.set_district(@uuid, true)
+              container.set_district(@_id, true)
               # StickShift::DataStore.instance.add_district_node(@uuid, server_identity)
               self.active_server_identities_size += 1
               self.server_identities << [{ "name" => server_identity, "active" => true}]
@@ -74,7 +76,7 @@ class District
           raise StickShift::SSException.new("Node with server identity: #{server_identity} could not be found")
         end
       else
-        raise StickShift::SSException.new("Node with server identity: #{server_identity} already belongs to another district: #{hash["uuid"]}")
+        raise StickShift::SSException.new("Node with server identity: #{server_identity} already belongs to another district: #{found._id}")
       end
     else
       raise StickShift::UserException.new("server_identity is required")
@@ -97,16 +99,16 @@ class District
           container.set_district('NONE', false)
           server_identities.delete({ "name" => server_identity, "active" => false} )
           if not self.save
-            raise StickShift::SSException.new("Node with server identity: #{server_identity} could not be removed from district: #{@uuid}")
+            raise StickShift::SSException.new("Node with server identity: #{server_identity} could not be removed from district: #{@_id}")
           end
         else
-          raise StickShift::SSException.new("Node with server identity: #{server_identity} could not be removed from district: #{@uuid} because it still has apps on it")
+          raise StickShift::SSException.new("Node with server identity: #{server_identity} could not be removed from district: #{@_id} because it still has apps on it")
         end
       else
-        raise StickShift::SSException.new("Node with server identity: #{server_identity} from district: #{@uuid} must be deactivated before it can be removed")
+        raise StickShift::SSException.new("Node with server identity: #{server_identity} from district: #{@_id} must be deactivated before it can be removed")
       end
     else
-      raise StickShift::SSException.new("Node with server identity: #{server_identity} doesn't belong to district: #{@uuid}")
+      raise StickShift::SSException.new("Node with server identity: #{server_identity} doesn't belong to district: #{@_id}")
     end
   end
   
@@ -118,12 +120,12 @@ class District
         District.where("_id" => self._id, "server_identities.name" => server_identity ).find_and_modify({ "$set" => { "server_identities.$.active" => false } }, new: true)
         self.reload
         container = StickShift::ApplicationContainerProxy.instance(server_identity)
-        container.set_district(@uuid, false)
+        container.set_district(@_id, false)
       else
         raise StickShift::SSException.new("Node with server identity: #{server_identity} is already deactivated")
       end
     else
-      raise StickShift::SSException.new("Node with server identity: #{server_identity} doesn't belong to district: #{@uuid}")
+      raise StickShift::SSException.new("Node with server identity: #{server_identity} doesn't belong to district: #{@_id}")
     end
   end
   
@@ -131,32 +133,25 @@ class District
     server_map = server_identities_hash
     if server_map.has_key?(server_identity)
       unless server_map[server_identity]["active"]
-        StickShift::DataStore.instance.activate_district_node(@uuid, server_identity)
         District.where("_id" => self._id, "server_identities.name" => server_identity ).find_and_modify({ "$set" => { "server_identities.$.active" => true} }, new: true)
         self.reload
         container = StickShift::ApplicationContainerProxy.instance(server_identity)
-        container.set_district(@uuid, true)
+        container.set_district(@_id, true)
       else
         raise StickShift::SSException.new("Node with server identity: #{server_identity} is already active")
       end
     else
-      raise StickShift::SSException.new("Node with server identity: #{server_identity} doesn't belong to district: #{@uuid}")
+      raise StickShift::SSException.new("Node with server identity: #{server_identity} doesn't belong to district: #{@_id}")
     end
   end
 
-  def reserve_uid
-    raise StickShift::SSException.new("The district #{@name} has no available uid to reserve.") if self.available_capacity <= 0
-    uid = self.available_uids.pop
-    self.available_capacity -= 1
-    self.save
-    uid
+  def self.reserve_uid(uuid)
+    obj = District.where("_id" => uuid).find_and_modify( {"$pop" => { "available_uids" => -1}, "$inc" => { "available_capacity" => -1 }})
+    obj.available_uids.first
   end
 
-  def unreserve_uid(uid)
-    raise StickShift::SSException.new("The district '#{@name}' already has the uid '#{uid}' unreserved") if self.available_uids.include? uid
-    @available_capacity += 1
-    @available_uids << uid
-    self.save
+  def self.unreserve_uid(uuid, uid)
+    District.where(:_id => uuid, :available_uids.nin => [uid]).find_and_modify({"$push" => { "available_uids" => uid}, "$inc" => { "available_capacity" => 1 }})
   end
   
   def add_capacity(num_uids)
@@ -202,6 +197,10 @@ class District
     else
       raise StickShift::SSException.new("You must supply a positive number of uids to remove")
     end
+  end
+
+  def self.inc_externally_reserved_uids_size(uuid)
+    District.where("_id" => uuid).find_and_modify({ "$inc" => { "externally_reserved_uids_size" => 1} })
   end
   
 end
