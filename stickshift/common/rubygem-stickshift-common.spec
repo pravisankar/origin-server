@@ -15,10 +15,10 @@ Group:          Development/Languages
 License:        ASL 2.0
 URL:            http://openshift.redhat.com
 #Source0:        http://mirror.openshift.com/pub/crankcase/source/rubygem-%{gem_name}/%{gem_name}-%{version}.gem
-Source0:				rubygem-%{gem_name}-%{version}
-Source1:        stickshift.fc
-Source2:        stickshift.if
-Source3:        stickshift.te
+Source0:				rubygem-%{gem_name}-%{version}.tar.gz
+#Source1:        stickshift.fc
+#Source2:        stickshift.if
+#Source3:        stickshift.te
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 #Requires:       %{?scl:%scl_prefix}ruby(abi) = %{rubyabi}
 Requires:       %{?scl:%scl_prefix}ruby
@@ -41,16 +41,15 @@ BuildRequires:  policycoreutils-python
 BuildArch:      noarch
 Provides:       rubygem(%{gem_name}) = %version
 
-%package -n ruby-%{gem_name}
-Summary:        Cloud Development Common Library
-Requires:       rubygem(%{gem_name}) = %version
-Provides:       ruby(%{gem_name}) = %version
+%package doc
+Summary:        Cloud Development Common Library Documentation
 
 %description
 This contains the Cloud Development Common packaged as a rubygem.
 
-%description -n ruby-%{gem_name}
-This contains the Cloud Development Common packaged as a ruby site library.
+%description doc
+This contains the Cloud Development Common packaged as a ruby site library
+documentation files.
 
 %prep
 %{?scl:scl enable %scl "}
@@ -73,30 +72,32 @@ gem install -V \
         --force \
         --rdoc \
         %{gem_name}-%{version}.gem
-cp  stickshift.fc %{_sourcedir}
-cp  stickshift.if %{_sourcedir}
-cp  stickshift.te %{_sourcedir}
 %{?scl:EOF}
 
 %install
 mkdir -p %{buildroot}%{gem_dir}
 cp -a ./%{gem_dir}/* %{buildroot}%{gem_dir}/
 
+
+%if 0%{?fedora}
 # Setup Selinux
 rm -rf selinux
 mkdir selinux
-mkdir -p %{buildroot}/usr/share/selinux/packages/%{name}
-cd selinux
-cp %{SOURCE1} .
-cp %{SOURCE2} .
-cp %{SOURCE3} .
+mkdir -p %{buildroot}%{_datadir}/selinux/packages/%{name}
 
-make -f /usr/share/selinux/devel/Makefile
+cp  stickshift.fc selinux/
+cp  stickshift.if selinux/
+cp  stickshift.te selinux/
+
+cd selinux
+
+make -f %{_datadir}/selinux/devel/Makefile
 install -p -m 644 -D stickshift.fc %{buildroot}%{_datadir}/selinux/packages/%{name}/stickshift.fc
 install -p -m 644 -D stickshift.if %{buildroot}%{_datadir}/selinux/packages/%{name}/stickshift.if
 install -p -m 644 -D stickshift.te %{buildroot}%{_datadir}/selinux/packages/%{name}/stickshift.te
 install -p -m 644 -D stickshift.pp %{buildroot}%{_datadir}/selinux/packages/%{name}/stickshift.pp
 cd -
+%endif
 
 %clean
 rm -rf %{buildroot}                                
@@ -105,7 +106,6 @@ rm -rf %{buildroot}
 %dir %{gem_instdir}
 %doc %{gem_instdir}/LICENSE
 %doc %{gem_instdir}/COPYRIGHT
-%doc %{gem_docdir}
 %doc %{gem_instdir}/.yardoc
 %doc %{gem_instdir}/Gemfile
 %doc %{gem_instdir}/Rakefile
@@ -113,11 +113,18 @@ rm -rf %{buildroot}
 %doc %{gem_instdir}/%{gem_name}.gemspec
 %{gem_spec}
 %{gem_libdir}
-%{_datadir}/selinux/packages/%{name}/
-%exclude %{gem_cache}
 
+%if 0%{?fedora}
+%{_datadir}/selinux/packages/%{name}/
+%endif 
+
+%exclude %{gem_cache}
 %exclude %{gem_instdir}/rubygem-%{gem_name}.spec
 
+%files doc 
+%doc %{gem_docdir}
+
+%if 0%{?fedora}
 %post
 if [ "$1" -le "1" ] ; then # First install
 semodule -i %{_datadir}/selinux/packages/%{name}/stickshift.pp 2>/dev/null || :
@@ -137,6 +144,7 @@ semodule -i %{_datadir}/selinux/packages/%{name}/stickshift.pp 2>/dev/null || :
 # affected by stickshift.fc, right?
 fixfiles -R rubygem-stickshift-common restore
 fi
+%endif
 
 %changelog
 * Wed Sep 12 2012 Adam Miller <admiller@redhat.com> 0.16.1-1
