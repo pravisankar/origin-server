@@ -74,7 +74,13 @@ class AppEventsController < BaseController
           #TODO: We need to reconsider how we are reporting messages to the client
           message = Message.new(:result, msg, 0)
           application = Application.find(@cloud_user, id)
-          app = RestApplication.new(application, get_url, nolinks)
+          
+          if $requested_api_version >= 1.2
+            app = RestApplication12.new(application, get_url, nolinks)
+          else
+            app = RestApplication10.new(application, get_url, nolinks)
+          end
+          
           render_success(:ok, "application", app, "#{event.sub('-', '_').upcase}_APPLICATION",
 			   "Application event '#{event}' successful", true, nil, [message])
 	  return
@@ -87,7 +93,13 @@ class AppEventsController < BaseController
     end
 
     application = Application.find_by(domain: domain, name: id)
-    app = RestApplication.new(application, get_url, nolinks)
+    
+    if $requested_api_version >= 1.2
+      app = RestApplication12.new(application, get_url, nolinks)
+    else
+      app = RestApplication10.new(application, get_url, nolinks)
+    end
+    
     @reply = RestReply.new(:ok, "application", app)
     message = Message.new("INFO", msg)
     @reply.messages.push(message)

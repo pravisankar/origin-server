@@ -176,7 +176,14 @@ class AppCartController < BaseController
       end
       
       application.remove_features([feature])
-      render_success(:ok, "application", RestApplication.new(application, get_url, nolinks), "REMOVE_CARTRIDGE", "Removed #{cartridge} from application #{id}", true)
+      
+      if $requested_api_version >= 1.2
+        app = RestApplication12.new(application, get_url, nolinks)
+      else
+        app = RestApplication10.new(application, get_url, nolinks)
+      end
+      
+      render_success(:ok, "application", app, "REMOVE_CARTRIDGE", "Removed #{cartridge} from application #{id}", true)
     rescue StickShift::UserException => e
       return render_error(:bad_request, "Application is currently busy performing another operation. Please try again in a minute.", 129, "REMOVE_CARTRIDGE")
     rescue Mongoid::Errors::DocumentNotFound

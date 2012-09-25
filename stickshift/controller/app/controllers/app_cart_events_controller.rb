@@ -39,7 +39,11 @@ class AppCartEventsController < BaseController
       return render_exception(e, "CARTRIDGE_EVENT")
     end
    
-    app = RestApplication.new(application, get_url, nolinks)
+    if $requested_api_version >= 1.2
+      app = RestApplication12.new(application, get_url, nolinks)
+    else
+      app = RestApplication10.new(application, get_url, nolinks)
+    end
     render_success(:ok, "application", app, "CARTRIDGE_EVENT", "Added #{event} on #{cartridge} for application #{id}", true) 
   end
 end
