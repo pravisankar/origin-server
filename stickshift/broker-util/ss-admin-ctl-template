@@ -77,7 +77,10 @@ if args["--help"]
   exit 1
 end
 
+require "/var/www/stickshift/broker/config/boot"
 require "/var/www/stickshift/broker/config/environment"
+require "/var/www/stickshift/broker/config/application"
+Rails.application.require_environment!
 
 case command
 when "add"
@@ -111,9 +114,10 @@ when "add"
 
   tags = "" if tags.nil?
   tags = tags.split(",")
-  template = ApplicationTemplate.new(display_name, descriptor.to_yaml, git_url, tags, gear_cost, metadata)
+  
+  template = ApplicationTemplate.new(display_name: display_name, descriptor_yaml: descriptor.to_yaml, git_url: git_url, tags: tags, gear_cost: gear_cost, template_metadata: metadata)
   template.save
-  print "Template #{template.uuid} created\n"
+  print "Template #{template.id.to_s} created\n"
 
 when "remove"
   # Make sure at least one of these is selected
@@ -129,44 +133,41 @@ when "remove"
     exit -100
   end
 
-  # Create arrays of stuff to find, the values can be comma separated
-  to_find = {
-    :uuid => (uuid || '').split(','),
-    :display_name => (display_name || '').split(',')
-  }
-
   # Retrieve all templates
-  templates = ApplicationTemplate.find_all
+  results = []
 
   # Don't filter if we're deleting all templates
   if all
-    results = templates
+    results = ApplicationTemplate.all
   else
-    # Find any templates that match any of the criteria
-    results = to_find.map do |func,vals|
-      templates.select do |x|
-        vals.include?(x.send(func))
-      end
-    end.flatten.compact.uniq
-
-    # Figure out what we couldn't find and report to the user
-    missing = Hash[to_find.map{|func,vals| [func,vals - results.map{|x| x.send(func) }] }]
-    missing.each do |func,vals|
-      # Create message depending on what we were searching for
-      msg = {:uuid => "with UUID", :display_name => "named"}.select{|k,v| k == func}.flatten[1]
-      # Go through all missing values
-      vals.each do |val|
-        print "Unable to find template #{msg} '#{val}'"
-        # See if there is a close match to the name
-        if (func == :display_name)
-          unless (matches = templates.map{|x| x.display_name }.grep(/#{val}/i)).empty?
-            print ", did you mean %s?" % matches.map{|x| "'#{x}'"}.join(" or ")
-          end
+    unless uuid.nil? or uuid.empty?
+      uuid.split(",").each do |u|
+        begin
+          results << ApplicationTemplate.find(u)
+        rescue Mongoid::Errors::DocumentNotFound
+          print "Unable to find template by UUID #{u}\n"
         end
-        print "\n"
       end
     end
-    print "\n" unless missing.empty?
+    
+    unless display_name.nil? or display_name.empty?
+      match_count = ApplicationTemplate.where(display_name: display_name).count
+      if match_count == 0
+        print "Display name #{display_name} did not match any templates. \nPossible alternatives:\n"
+        ApplicationTemplate.where(display_name: /#{display_name}/i).each do |t|
+          print "- #{t.id}: #{t.display_name}\n"
+        end
+        exit(-1)
+      elsif match_count > 1
+        print "Display name #{display_name} matches multiple templates. \nPlease specify UUID:\n"
+        ApplicationTemplate.where(display_name: display_name).each do |t|
+          print "- #{t.id}: #{t.display_name}\n"
+        end
+        exit(-1)
+      else
+        results << ApplicationTemplate.find_by(display_name: display_name)
+      end
+    end
   end
 
   # Loop through all results and attempt to delete
@@ -174,7 +175,7 @@ when "remove"
   results.each do |template|
     begin
       template.delete
-      result = "(%s) deleted" % template.uuid
+      result = "(%s) deleted" % template.id.to_s
     rescue
       result = "deletion FAILED"
     end

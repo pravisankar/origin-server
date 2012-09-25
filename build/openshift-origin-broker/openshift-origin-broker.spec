@@ -17,6 +17,7 @@ Requires: tig
 Requires: openssh-server
 Requires: rng-tools
 
+Requires: openshift-origin-broker-util
 Requires: stickshift-broker
 Requires: rubygem-swingshift-mongo-plugin
 Requires: rubygem-uplift-bind-plugin

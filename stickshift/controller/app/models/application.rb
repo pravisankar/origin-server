@@ -96,6 +96,21 @@ class Application
       raise StickShift::ApplicationValidationException.new(app)
     end
   end
+  
+  
+  def self.from_template(domain, hash, git_url)
+    app = Application.new(domain: domain, name: hash["Name"], default_gear_size: "small")
+    app.component_start_order = hash["Start-Order"] if hash.has_key?("Start-Order")
+    app.component_stop_order = hash["Stop-Order"] if hash.has_key?("Stop-Order")
+    begin    
+      app.save
+      app.add_features(hash["Requires"], hash["Group-Overrides"], git_url)
+    rescue
+      app.delete
+      raise 
+    end
+    app
+  end
 
   # Initializes the application
   #
@@ -199,33 +214,6 @@ class Application
     end
   end
 
-  # Updates the given ssh key on the application. It uses the user+key name to identify the key to update.
-  #
-  # == Parameters:
-  # user_id::
-  #   The ID of the user assoicated with the keys. Update to system keys is not supported.
-  # keys_attrs::
-  #   Array of keys attributes to update on the application. The name of the key is used to match existing keys.
-  # parent_op::
-  #   {PendingDomainOps} object used to track this operation at a domain level.
-  #
-  # == Returns:
-  # {PendingAppOps} object which tracks the progess of the operation.
-  def update_ssh_keys(user_id, keys_attrs, parent_op=nil)
-    return if keys_attrs.empty?
-    keys_attrs = keys_attrs.map { |k|
-      k["name"] = user_id.to_s + "-" + k["name"]
-      k
-    }
-    Application.run_in_application_lock(self) do
-      op_group = PendingAppOpGroup.new(op_type: :update_ssh_keys, args: {"keys" => keys_attrs}, parent_op: parent_op)
-      self.pending_op_groups.push op_group
-      result_io = ResultIO.new
-      self.run_jobs(result_io)
-      result_io
-    end
-  end
-
   # Removes the given ssh key from the application. If multiple users share the same key, only the specified users key is removed
   # but application access will still be possible.
   #
@@ -240,12 +228,12 @@ class Application
   # == Returns:
   # {PendingAppOps} object which tracks the progess of the operation.
   def remove_ssh_keys(user_id, keys_attrs, parent_op=nil)
-    return if keys.empty?
+    return if keys_attrs.empty?
     key_attrs = keys_attrs.map { |k|
-      if user.nil?
+      if user_id.nil?
         k["name"] = "domain-" + k["name"]
       else
-        k["name"] = user._id.to_s + "-" + k["name"]
+        k["name"] = user_id.to_s + "-" + k["name"]
       end
       k
     }
@@ -324,9 +312,9 @@ class Application
 
   # Adds components to the application
   # @note {#run_jobs} must be called in order to perform the updates
-  def add_features(features, group_overrides=nil)
+  def add_features(features, group_overrides=nil, init_git_url=nil)
     Application.run_in_application_lock(self) do
-      self.pending_op_groups.push PendingAppOpGroup.new(op_type: :add_features, args: {"features" => features, "group_overrides" => group_overrides})
+      self.pending_op_groups.push PendingAppOpGroup.new(op_type: :add_features, args: {"features" => features, "group_overrides" => group_overrides, "init_git_url"=>init_git_url})
       result_io = ResultIO.new
       self.run_jobs(result_io)
       result_io
@@ -801,13 +789,11 @@ class Application
           when :update_configuration
             ops = calculate_update_existing_configuration_ops(op_group.args)
             op_group.pending_ops.push(*ops)
-          when :update_ssh_keys
-            #todo
           when :add_features
             #need rollback
             features = self.requires + op_group.args["features"]
             group_overrides = self.group_overrides + (op_group.args["group_overrides"] || [])
-            ops, add_gear_count, rm_gear_count = update_requirements(features, group_overrides)
+            ops, add_gear_count, rm_gear_count = update_requirements(features, group_overrides, op_group.args["init_git_url"])
             try_reserve_gears(add_gear_count, rm_gear_count, op_group, ops)
           when :remove_features
             #need rollback
@@ -940,11 +926,11 @@ class Application
     ops
   end
 
-  def update_requirements(features, group_overrides)
+  def update_requirements(features, group_overrides, init_git_url=nil)
     connections, new_group_instances, cleaned_group_overrides = elaborate(features, group_overrides)
     current_group_instance = self.group_instances.map { |gi| gi.to_hash }
     changes, moves = compute_diffs(current_group_instance, new_group_instances)
-    calculate_ops(changes, moves, connections, cleaned_group_overrides)
+    calculate_ops(changes, moves, connections, cleaned_group_overrides,init_git_url)
   end
 
   def calculate_update_existing_configuration_ops(args, prereqs={})
@@ -999,11 +985,12 @@ class Application
     calculate_ops(changes)
   end
 
-  def calculate_gear_create_ops(ginst_id, gear_ids, singleton_gear_id, comp_specs, component_ops, additional_filesystem_gb, gear_size, ginst_op_id=nil, is_scale_up=false, hosts_app_dns=false)
+  def calculate_gear_create_ops(ginst_id, gear_ids, singleton_gear_id, comp_specs, component_ops, additional_filesystem_gb, gear_size, ginst_op_id=nil, is_scale_up=false, hosts_app_dns=false, init_git_url=nil)
     pending_ops = []
     ssh_keys = (self.app_ssh_keys + self.domain.system_ssh_keys + self.domain.owner.ssh_keys + CloudUser.find(self.domain.user_ids).map{|u| u.ssh_keys}.flatten)
     ssh_keys = ssh_keys.map{|k| k.attributes}
     env_vars = self.domain.env_vars
+    init_git_url = nil unless hosts_app_dns
 
     gear_id_prereqs = {}
     gear_ids.each do |gear_id|
@@ -1029,7 +1016,7 @@ class Application
     ops = calculate_update_new_configuration_ops({"add_keys_attrs" => ssh_keys, "add_env_vars" => env_vars}, ginst_id, gear_id_prereqs)
     pending_ops.push(*ops)
 
-    ops = calculate_add_component_ops(comp_specs, ginst_id, gear_id_prereqs, singleton_gear_id, component_ops, is_scale_up, ginst_op_id)
+    ops = calculate_add_component_ops(comp_specs, ginst_id, gear_id_prereqs, singleton_gear_id, component_ops, is_scale_up, ginst_op_id, init_git_url)
     pending_ops.push(*ops)
     pending_ops
   end
@@ -1046,7 +1033,7 @@ class Application
     pending_ops
   end
 
-  def calculate_add_component_ops(comp_specs, group_instance_id, gear_id_prereqs, singleton_gear_id, component_ops, is_scale_up, new_group_instance_op_id)
+  def calculate_add_component_ops(comp_specs, group_instance_id, gear_id_prereqs, singleton_gear_id, component_ops, is_scale_up, new_group_instance_op_id, init_git_url=nil)
     ops = []
 
     comp_specs.each do |comp_spec|
@@ -1064,13 +1051,15 @@ class Application
       if is_singleton
         if gear_id_prereqs.keys.include?(singleton_gear_id)
           prereq_id = gear_id_prereqs[singleton_gear_id]
-          op = PendingAppOp.new(op_type: :add_component, args: {"group_instance_id"=> group_instance_id, "gear_id" => singleton_gear_id, "comp_spec" => comp_spec}, prereq: new_component_op_id + [prereq_id])
+          op = PendingAppOp.new(op_type: :add_component, args: {"group_instance_id"=> group_instance_id, "gear_id" => singleton_gear_id, "comp_spec" => comp_spec, "init_git_url"=>init_git_url}, prereq: new_component_op_id + [prereq_id])
           ops.push op
           component_ops[comp_spec][:adds].push op
         end
       else
         gear_id_prereqs.each do |gear_id, prereq_id|
-          op = PendingAppOp.new(op_type: :add_component, args: {"group_instance_id"=> group_instance_id, "gear_id" => gear_id, "comp_spec" => comp_spec}, prereq: new_component_op_id + [prereq_id])
+          git_url = nil
+          git_url = init_git_url if gear_id == singleton_gear_id
+          op = PendingAppOp.new(op_type: :add_component, args: {"group_instance_id"=> group_instance_id, "gear_id" => gear_id, "comp_spec" => comp_spec, "init_git_url"=>git_url}, prereq: new_component_op_id + [prereq_id])
           ops.push op
           component_ops[comp_spec][:adds].push op
         end
@@ -1160,7 +1149,7 @@ class Application
   #
   # connections::
   #   An array of connections. (Output of {#elaborate})
-  def calculate_ops(changes,moves=[],connections=nil,group_overrides=nil)
+  def calculate_ops(changes,moves=[],connections=nil,group_overrides=nil,init_git_url=nil)
     app_dns_ginst_found = false
     add_gears = 0
     remove_gears = 0
@@ -1200,7 +1189,7 @@ class Application
         singleton_gear_id = gear_ids[0]
       end
 
-      ops = calculate_gear_create_ops(ginst_id, gear_ids, singleton_gear_id, comp_specs, component_ops, additional_filesystem_gb, gear_size, ginst_op._id.to_s, false, app_dns_ginst)
+      ops = calculate_gear_create_ops(ginst_id, gear_ids, singleton_gear_id, comp_specs, component_ops, additional_filesystem_gb, gear_size, ginst_op._id.to_s, false, app_dns_ginst,init_git_url)
       pending_ops.push *ops
     end
 

@@ -79,7 +79,8 @@ class CloudUser
   # Used to update an ssh-key on the user. Use this instead of ssh_keys= so that the key update can be propogated to the
   # domains/application that the user has access to.
   def update_ssh_key(key)
-    raise "noimpl"
+    remove_ssh_key(key.name)
+    add_ssh_key(key)
   end
   
   # Used to remove an ssh-key from the user. Use this instead of ssh_keys= so that the key removal can be propogated to the
@@ -99,7 +100,7 @@ class CloudUser
   end
   
   def domains
-    Domain.where(owner: self) + Domain.where(user_ids: self._id)
+    (Domain.where(owner: self) + Domain.where(user_ids: self._id)).uniq
   end
   
   # Return user capabilities. Subaccount user may inherit capabilities from its parent.

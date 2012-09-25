@@ -156,7 +156,7 @@ class PendingAppOpGroup
           when :del_component
             application.component_instances.delete(component_instance)
           when :add_component
-            result_io.append gear.add_component(component_instance)
+            result_io.append gear.add_component(component_instance, op.args["init_git_url"])
           when :remove_component
             result_io.append gear.remove_component(component_instance)          
           when :create_gear
@@ -220,6 +220,9 @@ class PendingAppOpGroup
           parallel_job_ops.each{ |op| op.state = :completed }
           self.application.save
         end
+      end
+      unless self.parent_op_id.nil?
+        self.application.domain.pending_ops.find(self.parent_op_id).child_completed(self.application)
       end
     rescue Exception => e_orig
       Rails.logger.error e_orig.message

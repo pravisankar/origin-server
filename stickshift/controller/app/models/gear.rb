@@ -93,8 +93,8 @@ class Gear
   # Exit codes:
   #   success = 0
   # @raise [StickShift::NodeException] on failure
-  def add_component(component)
-    result_io = get_proxy.configure_cartridge(app, self, component.cartridge_name)
+  def add_component(component, init_git_url=nil)
+    result_io = get_proxy.configure_cartridge(app, self, component.cartridge_name, init_git_url)
     component.process_properties(result_io)
     app.process_commands(result_io)
     raise StickShift::NodeException.new("Unable to add component #{component.cartridge_name}::#{component.component_name}", result_io.exitcode, result_io) if result_io.exitcode != 0

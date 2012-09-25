@@ -66,7 +66,19 @@ class ApplicationsController < BaseController
     end
 
     begin
-      application = Application.create_app(app_name, [feature], domain, "small", ResultIO.new)
+      if template_id.nil?
+        application = Application.create_app(app_name, [feature], domain, "small", ResultIO.new)
+      else
+        begin
+          template = ApplicationTemplate.find(template_id)
+        rescue Mongoid::Errors::DocumentNotFound
+          return render_error(:not_found, "Template with ID '#{template_id}' not found", 125, "ADD_APPLICATION", "template")
+        end
+        
+        descriptor_hash = YAML.load(template.descriptor_yaml)
+        descriptor_hash["Name"] = app_name
+        application = Application.from_template(domain, descriptor_hash, template.git_url)
+      end
     rescue StickShift::UnfulfilledRequirementException => e
       return render_error(:unprocessable_entity, "Unable to create application for #{e.feature}", 109, "ADD_APPLICATION", "cartridge")
     rescue ApplicationValidationException => e

@@ -282,12 +282,12 @@ domain_delete_v1 = RestApi_V1.new("/rest/domains/#{dom_id}", "DELETE")
 
 REST_CALLS_V1 = [
                   api_get_v1,
-                  #environment_get_v1,
+                  environment_get_v1,
                   user_get_v1,
                   cartridge_list_get_v1,
-                  #estimates_list_get_v1,
-                  #estimates_app_get_v1,
-                  #template_list_get_v1,
+                  #estimates_list_get_v1,   #dropped frm 1.0 spec
+                  #estimates_app_get_v1,    #dropped frm 1.0 spec
+                  template_list_get_v1,
                   domain_add_post_v1,
                   domains_list_get_v1,
                   domain_get_v1,
@@ -295,7 +295,7 @@ REST_CALLS_V1 = [
                   keys_post_v1,
                   keys_list_get_v1,
                   keys_get_v1,
-                  #keys_put_v1,
+                  keys_put_v1,
                   app_post_v1,
                   app_list_get_v1,
                   app_get_v1,
@@ -310,8 +310,8 @@ REST_CALLS_V1 = [
                   app_scale_down_post_v1,
                   app_add_cart_post_v1, 
                   app_expose_port_post_v1, 
-                  #app_show_port_post_v1,
-                  #app_gear_get_v1, 
+                  #app_show_port_post_v1,   #dropped frm 1.0 spec?
+                  #app_gear_get_v1,
                   app_gear_groups_get_v1,
                   app_conceal_port_post_v1,
                   app_cart_list_get_v1, 

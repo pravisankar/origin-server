@@ -44,7 +44,7 @@ namespace :test do
       "#{root}/test/unit/cloud_user_unit_test.rb",
       "#{root}/test/unit/legacy_request_test.rb",
       "#{root}/test/unit/rest_api_test.rb",
-      "#{root}/test/unit/rest_api_nolinks_test.rb"
+      "#{root}/test/unit/rest_api_nolinks_test.rb",
       "#{root}/test/functional/**/*_test.rb",
       "#{root}/test/integration/**/*_test.rb"
     ]

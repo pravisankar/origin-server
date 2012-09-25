@@ -234,7 +234,7 @@ end
 task :del_apps do
   sudo 'mongo broker_test --eval "db.dropDatabase();"'
   sudo 'mongo broker_development --eval "db.dropDatabase();"'
-  sudo 'rm -rf "/var/lib/stickshift/[0-9a-f]* /var/lib/stickshift/.httpd.d/[0-9a-f]*"'
+  sudo 'rm -rf /var/lib/stickshift/[0-9a-f]* /var/lib/stickshift/.httpd.d/[0-9a-f]*'
   (500..520).each { |x| `pkill -u #{x}` }
-  sudo 'ss-setup-broker'
+  sudo 'ss-setup-broker --eip 192.168.237.5/24 --egw 192.168.237.2'
 end

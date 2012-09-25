@@ -1,6 +1,7 @@
 Rails.application.routes.draw do
   scope "/rest" do
     resource :api, :only => [:show], :controller => :base
+    resource :environment, :only => [:show]
     resource :user, :only => [:show, :destroy], :controller => :user do
       resources :keys, :controller => :keys, :constraints => { :id => /[\w]+/ } 
     end

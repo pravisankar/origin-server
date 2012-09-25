@@ -1,4 +1,4 @@
-class EnvironmentController < BaseController
+class EnvironmentsController < BaseController
   respond_to :xml, :json
   before_filter :authenticate, :check_version
 

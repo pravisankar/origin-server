@@ -3,8 +3,8 @@ class RestApplicationTemplate < StickShift::Model
   
   def initialize(template, url, nolinks=false)
     @uuid, @display_name, @descriptor_yaml, @git_url, @tags, @gear_cost, @metadata =
-     template.uuid, template.display_name, template.descriptor_yaml, template.git_url, template.tags,
-        template.gear_cost, template.metadata
+     template._id.to_s, template.display_name, template.descriptor_yaml, template.git_url, template.tags,
+        template.gear_cost, template.template_metadata
         
     self.links = {
       "GET_TEMPLATE" => Link.new("Get specific template", "GET", URI::join(url, "application_templates/#{@uuid}")),

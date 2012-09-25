@@ -133,28 +133,6 @@ class Domain
     end
   end
   
-  # Support operation to update a specific ssh key for a user
-  #
-  # == Parameters:
-  # user_id::
-  #   The ID of the user who owns the ssh key
-  # key_attr::
-  #   SSH key attributes (name must be the same)
-  # pending_parent_op::
-  #   Parent opeation which tracks the key updates
-  #
-  # == Returns:
-  #  The domain operation which tracks the sshkey update
-  def update_ssh_key(user_id, key_attr, pending_parent_op)
-    return if pending_ops.where(parent_op_id: pending_parent_op._id).count > 0    
-    if((owner._id == user_id || user_ids.include?(user_id)) && self.applications.count > 0)
-      self.pending_ops.push(PendingDomainOps.new(op_type: :update_ssh_key, arguments: { "user_id" => user_id, "key_attrs" => [key_attr] }, parent_op_id: pending_parent_op._id, on_apps: self.applications, state: "init"))
-      self.run_jobs
-    else
-      pending_parent_op.child_completed(self) if pending_parent_op
-    end
-  end
-  
   # Support operation to remove specific ssh keys for a user
   #
   # == Parameters:
@@ -209,8 +187,6 @@ class Domain
         case op.op_type
         when :add_ssh_key
           op.pending_apps.each { |app| app.add_ssh_keys(op.arguments["user_id"], op.arguments["key_attrs"], op) }
-        when :update_ssh_key
-          op.pending_apps.each { |app| app.update_ssh_keys(op.arguments["user_id"], op.arguments["key_attrs"], op) }
         when :delete_ssh_key
           op.pending_apps.each { |app| app.remove_ssh_keys(op.arguments["user_id"], op.arguments["key_attrs"], op) }
         when :add_domain_ssh_keys

@@ -88,7 +88,7 @@ class KeysController < BaseController
     end
 
     begin
-      key = @cloud_user.update_ssh_key(key)
+      @cloud_user.update_ssh_key(key)
       ssh_key = RestKey.new(key, get_url, nolinks)
       log_action(@request_id, @cloud_user._id, @cloud_user.login, "UPDATE_KEY", true, "Updated SSH key #{id}")
       @reply = RestReply.new(:ok, "key", ssh_key)
@@ -97,6 +97,7 @@ class KeysController < BaseController
     rescue Exception => e
       log_action(@request_id, @cloud_user._id, @cloud_user.login, "UPDATE_KEY", false, "Failed to update SSH key #{id}: #{e.message}")
       Rails.logger.error e
+      Rails.logger.error e.backtrace
       @reply = RestReply.new(:internal_server_error)
       error_code = e.respond_to?('code') ? e.code : 1
       @reply.messages.push(Message.new(:error, "Failed to update SSH key #{id} for user #{@login} due to:#{e.message}", error_code) )
