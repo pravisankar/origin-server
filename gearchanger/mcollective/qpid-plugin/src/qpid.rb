@@ -68,8 +68,9 @@ module MCollective
           @connection = Cqpid::Connection.new(url, qpid_options)
           @connection.open
         rescue StandardError => e
+          Log.error e.message
+          Log.error e.backtrace
           Log.error("Initial connection failed... retrying")
-          Log.error(e.backtrace.inspect)
           sleep 5
           retry
         end
