@@ -151,6 +151,10 @@ class PendingAppOpGroup
             gear.reserve_uid
           when :unreserve_uid
             gear.unreserve_uid          
+          when :expose_port
+            job = gear.get_expose_port_job(cart_name)
+            RemoteJob.add_parallel_job(handle, "expose-ports::#{component_instance._id.to_s}", gear, job)
+            use_parallel_job = true
           when :new_component
             application.component_instances.push(component_instance)
           when :del_component
@@ -217,6 +221,12 @@ class PendingAppOpGroup
       
         if parallel_job_ops.length > 0
           RemoteJob.execute_parallel_jobs(handle)
+          RemoteJob.get_parallel_run_results(handle) do |tag, gear_id, output, status|
+            if status==0 && tag.start_with?("expose-ports::")
+              component_instance_id = tag[14..-1]
+              application.component_instances.find(component_instance_id).process_properties(ResultIO.new(status, output, gear_id))
+            end
+          end
           parallel_job_ops.each{ |op| op.state = :completed }
           self.application.save
         end

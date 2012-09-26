@@ -93,13 +93,11 @@ class AppEventsController < BaseController
     end
 
     application = Application.find_by(domain: domain, name: id)
-    
     if $requested_api_version >= 1.2
       app = RestApplication12.new(application, get_url, nolinks)
     else
       app = RestApplication10.new(application, get_url, nolinks)
     end
-    
     @reply = RestReply.new(:ok, "application", app)
     message = Message.new("INFO", msg)
     @reply.messages.push(message)

@@ -183,7 +183,7 @@ module GearChanger
           args['--with-uid'] = gear.uid if gear.uid
           mcoll_reply = execute_direct(@@C_CONTROLLER, 'app-create', args)
           result = parse_result(mcoll_reply, app, gear)
-          if result.exitcode == 129 && has_uid_or_gid?(app.gear.uid) # Code to indicate uid already taken
+          if result.exitcode == 129 && has_uid_or_gid?(gear.uid) # Code to indicate uid already taken
             destroy(app, gear, true)
             inc_externally_reserved_uids_size
             gear.uid = reserve_uid
@@ -574,7 +574,7 @@ module GearChanger
         app = source_gear.app
         prof = app.profile_name_map[app.default_profile]
         cinst = ComponentInstance::find_component_in_cart(prof, app, cart, app.get_name_prefix)
-        ginst = app.group_instance_map[cinst.group_instance_name]
+        ginst = source_gear.group_instance
         if destination_gear.nil?
           res, destination_gear = ginst.add_gear(app)
           keep_uid = false
@@ -809,13 +809,9 @@ module GearChanger
                 reply.append destination_container.stop(app, gear, cart)
               end
             end
-            if gear.node_profile != destination_node_profile
+            if gi.gear_size!= destination_node_profile
               log_debug "DEBUG: The gear's node profile changed from #{gear.node_profile} to #{destination_node_profile}"
-              gear.node_profile = destination_node_profile
-              if not app.scalable
-                app.node_profile = destination_node_profile 
-                gi.node_profile = destination_node_profile
-              end
+              gi.gear_size = destination_node_profile
             end
             app.save
 

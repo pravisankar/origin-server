@@ -636,17 +636,6 @@ class Application
 
   def execute_connections
     handle = RemoteJob.create_parallel_job
-    #expose port
-    self.group_instances.each do |group_instance|
-      component_instances = group_instance.all_component_instances
-      group_instance.gears.each do |gear|
-        component_instances.each do |component_instance|
-          job = gear.get_expose_port_job(component_instance.cartridge_name)
-          RemoteJob.add_parallel_job(handle, "expose-ports::#{component_instance._id.to_s}", gear, job)
-        end
-      end
-    end
-
     #publishers
     sub_jobs = []
     self.connections.each do |conn|
@@ -666,13 +655,8 @@ class Application
     RemoteJob.execute_parallel_jobs(handle)
     RemoteJob.get_parallel_run_results(handle) do |tag, gear_id, output, status|
       if status==0
-        if tag.start_with?("expose-ports::")
-          component_instance_id = tag[14..-1]
-          self.component_instances.find(component_instance_id).process_properties(ResultIO.new(status, output, gear_id))
-        else
-          pub_out[tag] = [] if pub_out[tag].nil?
-          pub_out[tag].push("'#{gear_id}'='#{output}'")
-        end
+        pub_out[tag] = [] if pub_out[tag].nil?
+        pub_out[tag].push("'#{gear_id}'='#{output}'")
       end
     end
 
@@ -1064,6 +1048,15 @@ class Application
           component_ops[comp_spec][:adds].push op
         end
       end
+    end
+
+    last_op = ops.last
+    expose_prereqs = []
+    expose_prereqs << last_op unless last_op.nil?
+
+    comp_specs.each do |comp_spec|
+      op = PendingAppOp.new(op_type: :expose_port, args: { "group_instance_id" => group_instance_id, "gear_id" => gear_id, "comp_spec" => comp_spec }, prereq: expose_prereqs)
+      ops.push op
     end
     ops
   end
