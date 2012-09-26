@@ -568,11 +568,6 @@ class Application
     result_io
   end
 
-  def system_messages
-    #todo
-    raise "noimpl"
-  end
-
   # Register a DNS alias for the application.
   #
   # == Parameters:
@@ -723,11 +718,11 @@ class Application
         env_vars_to_rm.push({"key" => command_item[:args][0]})
       when "BROKER_KEY_ADD"
         iv, token = StickShift::AuthService.instance.generate_broker_key(self)
-        #add_broker_auth_key(iv,token)
-        #TODO
+        pending_op = PendingAppOpGroup.new(op_type: :add_broker_auth_key, args: { "iv" => iv, "token" => token })
+        Application.where(_id: self._id).update_all({ "$push" => { pending_op_groups: pending_op.serializable_hash } })
       when "BROKER_KEY_REMOVE"
-        #remove_broker_auth_key
-        #TODO
+        pending_op = PendingAppOpGroup.new(op_type: :remove_broker_auth_key, args: { })
+        Application.where(_id: self._id).update_all({ "$push" => { pending_op_groups: pending_op.serializable_hash } })
       end
     end
 
@@ -829,6 +824,15 @@ class Application
                 gear = group_instance.gears.find_by(app_dns: true)
                 op_group.pending_ops.push PendingAppOp.new(op_type: :remove_alias, args: {"group_instance_id" => group_instance.id.to_s, "gear_id" => gear.id.to_s, "fqdn" => op_group.args["fqdn"]} )
                 break
+              end
+            end
+          when :add_broker_auth_key, :remove_broker_auth_key
+            ops = []
+            self.group_instances.each do |group_instance|
+              args["group_instance_id"] = group_instance._id.to_s
+              group_instance.gears.each do |gear|
+                args["gear_id"] = gear._id.to_s
+                ops.push(PendingAppOp.new(op_type: op_group.op_type, args: args.dup))
               end
             end
           when :start_app, :stop_app, :restart_app, :reload_app_config, :tidy_app
@@ -1055,8 +1059,10 @@ class Application
     expose_prereqs << last_op unless last_op.nil?
 
     comp_specs.each do |comp_spec|
-      op = PendingAppOp.new(op_type: :expose_port, args: { "group_instance_id" => group_instance_id, "gear_id" => gear_id, "comp_spec" => comp_spec }, prereq: expose_prereqs)
-      ops.push op
+      gear_id_prereqs.each do |gear_id, prereq_id|
+        op = PendingAppOp.new(op_type: :expose_port, args: { "group_instance_id" => group_instance_id, "gear_id" => gear_id, "comp_spec" => comp_spec }, prereq: expose_prereqs + [prereq_id])
+        ops.push op
+      end
     end
     ops
   end
