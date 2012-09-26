@@ -4,11 +4,17 @@ ENV["TEST_NAME"] = "SubUserTest"
 class SubUserTest < ActionDispatch::IntegrationTest
   def setup
     @random = rand(1000000)
-
     @username = "parent#{@random}"
-    @headers = {}
-    @headers["HTTP_AUTHORIZATION"] = "Basic " + Base64.encode64("#{@username}:password")
-    @headers["Accept"] = "application/json"
+    @password = 'nopass'
+
+    `mongo broker_test --eval 'db.auth_user.drop()'`
+    `mongo broker_test --eval 'db.auth_user.update({"user":"admin"}, {"user":"admin","password_hash":"2a8462d93a13e51387a5e607cbd1139f"}, true)'`
+    accnt = UserAccount.new(user: @username, password: @password)
+    accnt.save
+
+    @headers = Hash.new
+    @headers["HTTP_ACCEPT"] = "application/json"
+    @headers["HTTP_AUTHORIZATION"] = ActionController::HttpAuthentication::Basic.encode_credentials(@username, @password)
   end
 
   def test_normal_auth_success
@@ -62,9 +68,12 @@ class SubUserTest < ActionDispatch::IntegrationTest
     get "rest/domains.json", nil, @headers
     assert_equal 200, status
 
-    @headers2 = {}
-    @headers2["HTTP_AUTHORIZATION"] = "Basic " + Base64.encode64("#{subaccount_user}:password")
-    @headers2["Accept"] = "application/json"
+    subaccount_password = "pass"
+    accnt = UserAccount.new(user: subaccount_user, password: subaccount_password)
+    accnt.save
+    @headers2 = Hash.new
+    @headers2["HTTP_ACCEPT"] = "application/json"
+    @headers2["HTTP_AUTHORIZATION"] = ActionController::HttpAuthentication::Basic.encode_credentials(subaccount_user, subaccount_password)
     domain_name = "namespace#{@random}"
     post "rest/domains.json", { :id => domain_name }, @headers2
     assert_equal 201, status
@@ -83,8 +92,12 @@ class SubUserTest < ActionDispatch::IntegrationTest
     get "rest/domains.json", nil, @headers
     assert_equal 200, status
 
+    user = "#{@username}xyz"
+    password = "pass"
+    accnt = UserAccount.new(user: user, password: password)
+    accnt.save
     @headers2 = @headers.clone
-    @headers2["HTTP_AUTHORIZATION"] = "Basic " + Base64.encode64("#{@username}x:password")
+    @headers2["HTTP_AUTHORIZATION"] = ActionController::HttpAuthentication::Basic.encode_credentials(user, password)
     get "rest/domains.json", nil, @headers2
     assert_equal 200, status
 
@@ -92,7 +105,7 @@ class SubUserTest < ActionDispatch::IntegrationTest
     user1.capabilities_will_change!
     user1.capabilities['subaccounts'] = true
     user1.save
-    user2 = CloudUser.find_by(login: "#{@username}x")
+    user2 = CloudUser.find_by(login: user)
     user2.capabilities_will_change!
     user2.capabilities['subaccounts'] = true
     user2.save

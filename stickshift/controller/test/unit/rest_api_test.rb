@@ -1,11 +1,15 @@
 ENV["TEST_NAME"] = "RestApiTest"
 require 'test_helper'
-require "#{File.dirname(__FILE__)}/../helpers/rest/api_v1"
+require "#{File.dirname(__FILE__)}/../helpers/rest/v10/api_v10"
+require "#{File.dirname(__FILE__)}/../helpers/rest/v11/api_v11"
+require "#{File.dirname(__FILE__)}/../helpers/rest/v12/api_v12"
 require 'json'
 
 class RestApiTest < ActionController::IntegrationTest
   REST_CALLS = [ 
-    REST_CALLS_V1
+    AV10.rest_calls,
+    AV11.rest_calls,
+    AV12.rest_calls
   ]
 
   $user = 'test-user' + gen_uuid[0..9]
@@ -25,7 +29,7 @@ class RestApiTest < ActionController::IntegrationTest
     #register_user if registration_required?
     REST_CALLS.each do |rest_version|
       rest_version.each do |rest_api|
-        puts "#{rest_api.method}  #{rest_api.uri}  #{rest_api.request}"
+        puts "#{rest_api.method}  #{rest_api.version} #{rest_api.uri}  #{rest_api.request}"
         
         if rest_api.version
           @env["HTTP_ACCEPT"] = "application/json; version=#{rest_api.version}"

@@ -2,12 +2,16 @@ ENV["TEST_NAME"] = "RestApiNolinksTest"
 require 'test_helper'
 require "#{File.dirname(__FILE__)}/../helpers/rest/api_common"
 $nolinks = true
-require "#{File.dirname(__FILE__)}/../helpers/rest/api_v1"
+require "#{File.dirname(__FILE__)}/../helpers/rest/v10/api_v10"
+require "#{File.dirname(__FILE__)}/../helpers/rest/v11/api_v11"
+require "#{File.dirname(__FILE__)}/../helpers/rest/v12/api_v12"
 require 'json'
 
 class RestApiNolinksTest < ActionController::IntegrationTest
   REST_CALLS = [ 
-    REST_CALLS_V1
+    AV10.rest_calls,
+    AV11.rest_calls,
+    AV12.rest_calls
   ]
 
   $user = 'test-user' + gen_uuid[0..9]

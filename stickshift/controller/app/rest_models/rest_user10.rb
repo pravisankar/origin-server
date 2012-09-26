@@ -1,4 +1,4 @@
-class RestUser11 < StickShift::Model
+class RestUser10 < StickShift::Model
   attr_accessor :login, :consumed_gears, :max_gears, :capabilities, :plan_id, :usage_account_id, :links
 
   def initialize(cloud_user, url, nolinks=false)
