@@ -338,6 +338,15 @@ class Application
   # Destroys all gears on the application.
   # @note {#run_jobs} must be called in order to perform the updates
   def destroy_app
+    self.domain.applications.each { |app|
+      app.domain_requires.each { |app_id|
+        if app_id==self._id
+          # now we have to worry if apps have a circular dependency among them or not
+          # assuming not for now or else stack overflow
+          app.destroy_app
+        end
+      }
+    }
     Application.run_in_application_lock(self) do
       self.remove_features(self.requires)
       self.pending_op_groups.push PendingAppOpGroup.new(op_type: :delete_app)
@@ -828,6 +837,7 @@ class Application
             end
           when :add_broker_auth_key, :remove_broker_auth_key
             ops = []
+            args = op_group.args.dup
             self.group_instances.each do |group_instance|
               args["group_instance_id"] = group_instance._id.to_s
               group_instance.gears.each do |gear|
@@ -835,6 +845,7 @@ class Application
                 ops.push(PendingAppOp.new(op_type: op_group.op_type, args: args.dup))
               end
             end
+            op_group.pending_ops.push(*ops)
           when :start_app, :stop_app, :restart_app, :reload_app_config, :tidy_app
             ops = calculate_ctl_app_component_ops(op_group.op_type)
             op_group.pending_ops.push(*ops)
@@ -1056,7 +1067,7 @@ class Application
 
     last_op = ops.last
     expose_prereqs = []
-    expose_prereqs << last_op unless last_op.nil?
+    expose_prereqs << last_op._id.to_s unless last_op.nil?
 
     comp_specs.each do |comp_spec|
       gear_id_prereqs.each do |gear_id, prereq_id|
