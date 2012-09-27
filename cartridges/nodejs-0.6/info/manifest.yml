@@ -48,8 +48,6 @@ Provides:
   - "nodejs"
   - "nodejs (version) = 0.6.10"
   - "nodejs (version) = 0.6"
-Requires:
-  - web_proxy
 Group-Overrides:
   - components:
     - nodejs

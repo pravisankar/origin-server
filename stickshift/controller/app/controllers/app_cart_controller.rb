@@ -43,19 +43,25 @@ class AppCartController < BaseController
     begin
       domain = Domain.find_by(owner: @cloud_user, namespace: domain_id)
     rescue Mongoid::Errors::DocumentNotFound
-      return render_error(:not_found, "Domain #{domain_id} not found", 127, "SHOW_APP_CARTRIDGE")
+      return render_error(:not_found, "Domain #{domain_id} not found", 127, "PATCH_APP_CARTRIDGE")
     end
     
     begin
       application = Application.find_by(domain: domain, name: application_id)
-      component_instance = application.component_instances.find_by(cartridge_name: id)
       
-      application.update_component_limits(component_instance, scale_from, scale_to, additional_storage)
-      cartridge = RestCartridge11.new(nil,CartridgeCache.find_cartridge(comp.cartridge_name),application,comp,get_url,nolinks)
-    
+      if !application.scalable and (scales_from != 1 or scales_to != 1)
+        return render_error(:unprocessable_entity, "Application '#{application_id}' is not scalable", 100, "PATCH_APP_CARTRIDGE", "name")
+      end
+      
+      component_instance = application.component_instances.find_by(cartridge_name: id)
+
+      application.update_component_limits(component_instance, scales_from, scales_to, additional_storage)
+
+      component_instance = application.component_instances.find_by(cartridge_name: id)
+      cartridge = get_rest_cartridge(application, component_instance, application.group_instances_with_scale, application.group_overrides)
       return render_success(:ok, "cartridge", cartridge, "SHOW_APP_CARTRIDGE", "Showing cartridge #{id} for application #{application_id} under domain #{domain_id}")
     rescue Mongoid::Errors::DocumentNotFound
-      return render_error(:not_found, "Application '#{application_id}' not found for domain '#{domain_id}'", 101, "SHOW_APP_CARTRIDGE")
+      return render_error(:not_found, "Application '#{application_id}' not found for domain '#{domain_id}'", 101, "PATCH_APP_CARTRIDGE")
     end
     
     return render_success(:ok, "cartridge", [], "PATCH_APP_CARTRIDGE", "")  

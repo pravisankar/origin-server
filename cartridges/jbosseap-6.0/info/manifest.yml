@@ -50,8 +50,6 @@ Provides:
   - "jbosseap(version) >= 6.0"
   - "jboss-eap6.0"
   - "jboss-eap6.0.0"
-Requires:
-  - web_proxy
 Group-Overrides:
   - components:
     - jbosseap

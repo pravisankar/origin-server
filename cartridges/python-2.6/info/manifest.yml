@@ -49,8 +49,6 @@ Provides:
   - "python-2.6"
   - "wsgi"
   - "wsgi (version) = 3.2"
-Requires:
-  - web_proxy
 Group-Overrides:
   - components:
     - python-2.6

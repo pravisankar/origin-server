@@ -49,8 +49,6 @@ Provides:
   - "jboss(version) = 7.1.0"
   - "jboss(version) >= 7.1"
   - "jboss-as7.1"
-Requires:
-  - web_proxy
 Group-Overrides:
   - components:
     - jboss

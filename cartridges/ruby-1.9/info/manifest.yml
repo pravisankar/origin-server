@@ -47,8 +47,6 @@ Cart-Data:
 Provides:
   - "ruby-1.9"
   - "ruby(version) = 1.9"
-Requires:
-  - web_proxy
 Group-Overrides:
   - components:
     - ruby-1.9

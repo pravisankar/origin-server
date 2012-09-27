@@ -21,7 +21,7 @@ class RestApplication12 < StickShift::Model
     self.domain_id = app.domain.namespace
 
     self.gear_profile = app.default_gear_size
-    self.scalable = true
+    self.scalable = app.scalable
 
     self.git_url = "ssh://#{app.ssh_uri}/~/git/#{@name}.git/"
     self.app_url = "http://#{app.fqdn}/"

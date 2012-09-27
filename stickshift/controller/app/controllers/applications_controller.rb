@@ -54,6 +54,7 @@ class ApplicationsController < BaseController
     app_name = params[:name]
     feature = params[:cartridge]
     template_id = params[:template]
+    scalable = params[:scale]
     
     begin
       domain = Domain.find_by(owner: @cloud_user, namespace: domain_id)
@@ -67,7 +68,7 @@ class ApplicationsController < BaseController
 
     begin
       if template_id.nil?
-        application = Application.create_app(app_name, [feature], domain, "small", ResultIO.new)
+        application = Application.create_app(app_name, [feature], domain, "small", scalable, ResultIO.new)
       else
         begin
           template = ApplicationTemplate.find(template_id)

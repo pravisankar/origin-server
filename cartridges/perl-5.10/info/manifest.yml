@@ -47,8 +47,6 @@ Cart-Data:
 Provides:
   - "perl-5.10"
   - "mod_perl"
-Requires:
-  - web_proxy
 Group-Overrides:
   - components:
     - perl-5.10

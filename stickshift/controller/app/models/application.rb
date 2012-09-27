@@ -53,6 +53,7 @@ class Application
   field :component_stop_order, type: Array, default: []
   field :component_configure_order, type: Array, default: []
   field :default_gear_size, type: String, default: "small"
+  field :scalable, type: Boolean, default: false
   embeds_many :connections, class_name: ConnectionInstance.name
   embeds_many :component_instances, class_name: ComponentInstance.name
   embeds_many :group_instances, class_name: GroupInstance.name
@@ -81,8 +82,9 @@ class Application
     notify_observers(:validate_application)
   end
 
-  def self.create_app(application_name, features, domain, default_gear_size, result_io, group_overrides=nil)
-    app = Application.new(domain: domain, features: features, name: application_name, default_gear_size: default_gear_size)
+  def self.create_app(application_name, features, domain, default_gear_size, scalable, result_io, group_overrides=[])
+    app = Application.new(domain: domain, name: application_name, default_gear_size: default_gear_size, scalable: scalable)
+    features << "web_proxy" if scalable
     if app.valid?
       begin
         app.add_features(features, group_overrides)
@@ -312,7 +314,7 @@ class Application
 
   # Adds components to the application
   # @note {#run_jobs} must be called in order to perform the updates
-  def add_features(features, group_overrides=nil, init_git_url=nil)
+  def add_features(features, group_overrides=[], init_git_url=nil)
     Application.run_in_application_lock(self) do
       self.pending_op_groups.push PendingAppOpGroup.new(op_type: :add_features, args: {"features" => features, "group_overrides" => group_overrides, "init_git_url"=>init_git_url})
       result_io = ResultIO.new
@@ -323,11 +325,8 @@ class Application
 
   # Adds components to the application
   # @note {#run_jobs} must be called in order to perform the updates
-  def remove_features(features, group_overrides=nil)
+  def remove_features(features, group_overrides=[])
     Application.run_in_application_lock(self) do
-      unless group_overrides.nil?
-        self.set(:group_overrides, group_overrides)
-      end
       self.pending_op_groups.push PendingAppOpGroup.new(op_type: :remove_features, args: {"features" => features, "group_overrides" => group_overrides})
       result_io = ResultIO.new
       self.run_jobs(result_io)
@@ -926,6 +925,8 @@ class Application
   end
 
   def update_requirements(features, group_overrides, init_git_url=nil)
+    group_overrides = (group_overrides + gen_non_scalable_app_overrides(features)).uniq unless self.scalable
+    
     connections, new_group_instances, cleaned_group_overrides = elaborate(features, group_overrides)
     current_group_instance = self.group_instances.map { |gi| gi.to_hash }
     changes, moves = compute_diffs(current_group_instance, new_group_instances)
@@ -1485,6 +1486,9 @@ class Application
         processed_components += [proc_comp_spec]
       end while (relevant_components - processed_components).length != 0
       
+      relevant_components.uniq!
+      relevant_components.delete(nil)
+      
       processed_group_override["components"] = relevant_components
       component_instances -= processed_group_override["components"]
       
@@ -1816,4 +1820,35 @@ class Application
     end
   end
 
+  def gen_non_scalable_app_overrides(features)
+    #find web_framework
+    web_framework = {}
+    features.each do |feature|
+      cart = CartridgeCache.find_cartridge(feature)
+      next unless cart.categories.include? "web_framework"
+      prof = cart.profile_for_feature(feature)
+      comp = prof.components.first
+      web_framework = {"cart"=>cart.name, "comp"=>comp.name}
+    end
+    
+    group_overrides = [{"components"=>[web_framework], "max_gears"=> 1}]
+    #generate group overrides to colocate all components with web_framework and limit scale to 1
+    features.each do |feature|
+      cart = CartridgeCache.find_cartridge(feature)
+      next if cart.categories.include? "web_framework"
+      prof = cart.profile_for_feature(feature)
+      components = prof.components
+      group_overrides += components.map { |comp| 
+        {
+          "components" => [
+            web_framework,
+            {"cart"=>cart.name, "comp"=>comp.name}
+          ],
+          "max_gears" => 1
+        }
+      }
+    end
+    
+    group_overrides
+  end
 end

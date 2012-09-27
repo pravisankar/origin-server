@@ -237,7 +237,7 @@ class LegacyBrokerController < BaseController
       raise StickShift::UserException.new("The supplied application name '#{app.name}' is not allowed", 105) if StickShift::ApplicationContainerProxy.blacklisted? @req.app_name
       
       begin
-        app = Application.create_app(@req.app_name, [@req.cartridge], domain, @req.node_profile, @reply)
+        app = Application.create_app(@req.app_name, [@req.cartridge], domain, @req.node_profile, false, @reply)
         case @req.cartridge
         when 'php'
           page = 'health_check.php'
