@@ -19,7 +19,7 @@ Gem::Specification.new do |s|
   s.test_files = Dir["test/**/*"]
   s.executables = Dir[bin_dir].map {|binary| File.basename(binary)}
 
-  s.add_dependency "rails", "= 3.2.6"
+  s.add_dependency "rails", "= 3.2.8"
 
   s.add_dependency "json"
   s.add_dependency "dnsruby"
