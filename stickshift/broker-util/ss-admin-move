@@ -94,9 +94,9 @@ end
 url = "http://#{app.name}-#{app.domain.namespace}.#{Rails.configuration.ss[:domain_suffix]}"
 
 puts "URL: #{url}"
-puts "Login: #{app.user.login}"
-puts "App UUID: #{app.uuid}"
-puts "Gear UUID: #{gear.uuid}"
+puts "Login: #{app.domain.owner.login}"
+puts "App UUID: #{app._id}"
+puts "Gear UUID: #{gear._id}"
 
 destination_container = nil
 destination_container = StickShift::ApplicationContainerProxy.instance(target_server_identity) if target_server_identity

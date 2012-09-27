@@ -1778,23 +1778,23 @@ class Application
       usage_record = UsageRecord.new(event, user, now, uuid, usage_type)
       case usage_type
       when UsageRecord::USAGE_TYPES[:gear_usage]
-        usage_record.gear_uuid = gear.uuid
+        usage_record.gear_uuid = gear._id
         usage_record.gear_size = gear.group_instance.gear_profile
       when UsageRecord::USAGE_TYPES[:addtl_fs_gb]
-        usage_record.gear_uuid = gear.uuid
+        usage_record.gear_uuid = gear._id
         usage_record.addtl_fs_gb = gear.group_instance.addtl_fs_gb
       end
       self.usage_records << usage_record
 
-      self.class.notify_observers(:track_usage, {:gear_uuid => gear.uuid, :login => gear.app.user.login, :event => event, :time => now, :uuid => uuid, :usage_type => usage_type, :gear_size => gear.group_instance.gear_profile, :addtl_fs_gb => gear.group_instance.addtl_fs_gb})
+      self.class.notify_observers(:track_usage, {:gear_uuid => gear._id, :login => gear.app.domain.owner.login, :event => event, :time => now, :uuid => uuid, :usage_type => usage_type, :gear_size => gear.group_instance.gear_profile, :addtl_fs_gb => gear.group_instance.addtl_fs_gb})
     end
     if Rails.configuration.usage_tracking[:syslog_enabled]
       usage_string = "User: #{user.login}  Event: #{event}"
       case usage_type
       when UsageRecord::USAGE_TYPES[:gear_usage]
-        usage_string += "   Gear: #{gear.uuid}   Gear Size: #{gear.group_instance.gear_profile}"
+        usage_string += "   Gear: #{gear._id}   Gear Size: #{gear.group_instance.gear_profile}"
       when UsageRecord::USAGE_TYPES[:addtl_fs_gb]
-        usage_string += "   Gear: #{gear.uuid}   Addtl File System GB: #{gear.group_instance.addtl_fs_gb}"
+        usage_string += "   Gear: #{gear._id}   Addtl File System GB: #{gear.group_instance.addtl_fs_gb}"
       end
       begin
         Syslog.open('openshift_usage', Syslog::LOG_PID) { |s| s.notice usage_string }

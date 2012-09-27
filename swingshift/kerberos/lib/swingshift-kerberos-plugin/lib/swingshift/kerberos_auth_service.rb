@@ -31,7 +31,7 @@ module Swingshift
       cipher.key = OpenSSL::Digest::SHA512.new(@salt).digest
       cipher.iv = iv = cipher.random_iv
       token = {:app_name => app.name,
-               :login => app.user.login,
+               :login => app.domain.owner.login,
                :creation_time => app.creation_time}
       encrypted_token = cipher.update(token.to_json)
       encrypted_token << cipher.final

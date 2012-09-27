@@ -1,3 +1,14 @@
+%if 0%{?fedora}%{?rhel} <= 6
+    %global scl ruby193
+    %global scl_prefix ruby193-
+%endif
+%if 0%{?fedora}
+    %global vendor_ruby /usr/share/ruby/vendor_ruby/
+%endif
+%if 0%{?rhel}
+    %global vendor_ruby /opt/rh/ruby193/root/usr/share/ruby/vendor_ruby/
+%endif
+
 Summary:        M-Collective agent file for gearchanger-m-collective-plugin
 Name:           stickshift-mcollective-agent
 Version: 0.4.1
@@ -14,13 +25,13 @@ Requires:       rubygem-stickshift-node
 Requires:       mcollective
 Requires:       facter
 %if 0%{?fedora}%{?rhel} <= 6
-Requires:       ruby193-mcollective-common
-Requires:       ruby193-facter
+Requires:       %{?scl:%scl_prefix}mcollective-common
+Requires:       %{?scl:%scl_prefix}facter
 %endif
 BuildArch:      noarch
 
 %description
-mcollective communication plugin for amqp 1.0 enabled qpid broker
+mcollective communication plugin
 
 %prep
 %setup -q
@@ -33,13 +44,13 @@ rm -rf %{buildroot}
 %install
 rm -rf %{buildroot}
 mkdir -p %{buildroot}/usr/libexec/mcollective/mcollective/agent
-mkdir -p %{buildroot}/usr/share/ruby/vendor_ruby/facter/
+mkdir -p %{buildroot}%{vendor_ruby}facter
 mkdir -p %{buildroot}/etc/cron.minutely
 mkdir -p %{buildroot}/usr/libexec/mcollective
 
 cp src/stickshift.rb %{buildroot}/usr/libexec/mcollective/mcollective/agent/
 cp src/stickshift.ddl %{buildroot}/usr/libexec/mcollective/mcollective/agent/
-cp facts/stickshift_facts.rb %{buildroot}/usr/share/ruby/vendor_ruby/facter/
+cp facts/stickshift_facts.rb %{buildroot}%{vendor_ruby}facter
 cp facts/stickshift-facts %{buildroot}/etc/cron.minutely/
 cp facts/update_yaml.rb %{buildroot}/usr/libexec/mcollective/
 
@@ -47,7 +58,7 @@ cp facts/update_yaml.rb %{buildroot}/usr/libexec/mcollective/
 %defattr(-,root,root,-)
 /usr/libexec/mcollective/mcollective/agent/stickshift.rb
 /usr/libexec/mcollective/mcollective/agent/stickshift.ddl
-/usr/share/ruby/vendor_ruby/facter/stickshift_facts.rb
+%{vendor_ruby}facter/stickshift_facts.rb
 %attr(0700,-,-) /usr/libexec/mcollective/update_yaml.rb
 %attr(0700,-,-) /etc/cron.minutely/stickshift-facts
 /etc/cron.minutely/stickshift-facts
