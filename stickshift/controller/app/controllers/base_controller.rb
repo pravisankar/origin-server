@@ -5,8 +5,8 @@ class BaseController < ApplicationController
   SUPPORTED_API_VERSIONS = [1.0,1.1,1.2]
   include UserActionLogger
   
-  Mongoid.logger.level = Logger::WARN
-  Moped.logger.level = Logger::WARN
+  #Mongoid.logger.level = Logger::WARN
+  #Moped.logger.level = Logger::WARN
 
   before_filter :set_locale
   def set_locale
