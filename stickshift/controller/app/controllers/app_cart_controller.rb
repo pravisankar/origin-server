@@ -216,7 +216,7 @@ class AppCartController < BaseController
     if $requested_api_version >= 1.1
       RestCartridge11.new(cart, comp, application, component_instance, colocated_instances, scale, get_url, messages, nolinks)
     else
-      RestCartridge10.new(cart, comp, application, component_instance, colocated_instances, scale, get_url, messages, nolinks)
+      RestCartridge10.new(cart, application, component_instance, get_url, nolinks)
     end
   end
 end

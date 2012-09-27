@@ -35,18 +35,21 @@ BuildRequires:  %{?scl:%scl_prefix}ruby(abi) = %{rubyabi}
 BuildRequires:  %{?scl:%scl_prefix}ruby 
 BuildRequires:  %{?scl:%scl_prefix}rubygems
 BuildRequires:  %{?scl:%scl_prefix}rubygems-devel
-BuildRequires:  %{?scl:%scl_prefix}rubygem(rails)
-BuildRequires:  %{?scl:%scl_prefix}rubygem(compass-rails)
-BuildRequires:  %{?scl:%scl_prefix}rubygem(mocha)
-BuildRequires:  %{?scl:%scl_prefix}rubygem(simplecov)
-BuildRequires:  %{?scl:%scl_prefix}rubygem(test-unit)
-BuildRequires:  %{?scl:%scl_prefix}rubygem(ci_reporter)
-BuildRequires:  %{?scl:%scl_prefix}rubygem(webmock)
-BuildRequires:  %{?scl:%scl_prefix}rubygem(sprockets)
-BuildRequires:  %{?scl:%scl_prefix}rubygem(rdiscount)
-BuildRequires:  %{?scl:%scl_prefix}rubygem(formtastic)
-BuildRequires:  %{?scl:%scl_prefix}rubygem(net-http-persistent)
-BuildRequires:  %{?scl:%scl_prefix}rubygem(haml)
+%if 0%{?fedora}%{?rhel} <= 6
+  BuildRequires:  %{?scl:%scl_prefix}rubygem(rails)
+  BuildRequires:  %{?scl:%scl_prefix}rubygem(compass-rails)
+  BuildRequires:  %{?scl:%scl_prefix}rubygem(mocha)
+  BuildRequires:  %{?scl:%scl_prefix}rubygem(simplecov)
+  BuildRequires:  %{?scl:%scl_prefix}rubygem(test-unit)
+  BuildRequires:  %{?scl:%scl_prefix}rubygem(ci_reporter)
+  BuildRequires:  %{?scl:%scl_prefix}rubygem(webmock)
+  BuildRequires:  %{?scl:%scl_prefix}rubygem(sprockets)
+  BuildRequires:  %{?scl:%scl_prefix}rubygem(rdiscount)
+  BuildRequires:  %{?scl:%scl_prefix}rubygem(formtastic)
+  BuildRequires:  %{?scl:%scl_prefix}rubygem(net-http-persistent)
+  BuildRequires:  %{?scl:%scl_prefix}rubygem(haml)
+%endif
+
 
 BuildArch:      noarch
 Provides:       rubygem(%{gem_name}) = %version
@@ -68,7 +71,12 @@ mkdir -p .%{gem_dir}
 
 # Temporary BEGIN
 rm Gemfile.lock
+
+%if 0%{?fedora}%{?rhel} <= 6
 bundle install --local
+%else
+bundle install
+%endif
 # Temporary END
 pushd test/rails_app/
 RAILS_ENV=production RAILS_RELATIVE_URL_ROOT=/console bundle exec rake assets:precompile assets:public_pages

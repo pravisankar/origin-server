@@ -7,7 +7,7 @@ class MV11 < MV10
       :suggests, :requires, :conflicts, :provides, :help_topics, :links, :properties,
       :display_name, :description, :scales_from, :scales_to, :current_scale, 
       :supported_scales_from, :supported_scales_to, :scales_with, :base_gear_storage, 
-      :additional_gear_storage, :gear_size, :collocated_with
+      :additional_gear_storage, :gear_size, :collocated_with, :status_messages
     
     def initialize(type=nil, name=nil)
       self.name = name

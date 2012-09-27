@@ -1,4 +1,6 @@
+require 'action_dispatch/http/mime_type'
 require 'action_dispatch/http/mime_types'
+
 module Mime
   class Type
     class << self
