@@ -10,7 +10,13 @@
 # Used for openshift.com only default to False
 %global hosted 0
 
-%global appdir %{_localstatedir}/lib/stickshift
+%if 0%{?fedora}
+  %global appdir %{_localstatedir}/lib/stickshift
+%endif
+
+%if 0%{?rhel}
+  %global appdir /var/lib/stickshift
+%endif
 
 Summary:        Cloud Development Node
 Name:           rubygem-%{gem_name}
