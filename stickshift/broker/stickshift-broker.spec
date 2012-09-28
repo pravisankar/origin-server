@@ -1,5 +1,5 @@
-%define htmldir %{_localstatedir}/www/html
-%define brokerdir %{_localstatedir}/www/stickshift/broker
+%define htmldir %{_var}/www/html
+%define brokerdir %{_var}/www/stickshift/broker
 
 Summary:   StickShift broker components
 Name:      stickshift-broker
@@ -89,8 +89,8 @@ ln -sf /usr/lib64/httpd/modules %{buildroot}%{brokerdir}/httpd/modules
 ln -sf /etc/httpd/conf/magic %{buildroot}%{brokerdir}/httpd/conf/magic
 mv %{buildroot}%{brokerdir}/httpd/000000_stickshift_proxy.conf %{buildroot}%{_sysconfdir}/httpd/conf.d/
 
-mkdir -p %{buildroot}%{_localstatedir}/log/stickshift
-touch %{buildroot}%{_localstatedir}/log/stickshift/user_action.log
+mkdir -p %{buildroot}%{_var}/log/stickshift
+touch %{buildroot}%{_var}/log/stickshift/user_action.log
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -99,7 +99,7 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(0640,apache,apache,0750)
 %attr(0666,-,-) %{brokerdir}/log/production.log
 %attr(0666,-,-) %{brokerdir}/log/development.log
-%attr(0666,-,-) %{_localstatedir}/log/stickshift/user_action.log
+%attr(0666,-,-) %{_var}/log/stickshift/user_action.log
 %attr(0750,-,-) %{brokerdir}/script
 %attr(0750,-,-) %{brokerdir}/tmp
 %attr(0750,-,-) %{brokerdir}/tmp/cache
@@ -132,7 +132,7 @@ rm -rf $RPM_BUILD_ROOT
 /bin/touch %{brokerdir}/log/development.log
 /bin/touch %{brokerdir}/httpd/logs/error_log
 /bin/touch %{brokerdir}/httpd/logs/access_log
-/bin/touch %{_localstatedir}/log/stickshift/user_action.log
+/bin/touch %{_var}/log/stickshift/user_action.log
 
 %if %{with_systemd}
 systemctl --system daemon-reload
@@ -149,7 +149,7 @@ fcontext -a -t httpd_var_run_t '%{brokerdir}/httpd/run(/.*)?'
 fcontext -a -t httpd_tmp_t '%{brokerdir}/tmp(/.*)?'
 fcontext -a -t httpd_log_t '%{brokerdir}/httpd/logs(/.*)?'
 fcontext -a -t httpd_log_t '%{brokerdir}/log(/.*)?'
-fcontext -a -t httpd_log_t '%{_localstatedir}/log/stickshift/user_action.log'
+fcontext -a -t httpd_log_t '%{_var}/log/stickshift/user_action.log'
 _EOF
 
 chcon -R -t httpd_log_t %{brokerdir}/httpd/logs %{brokerdir}/log
@@ -160,7 +160,7 @@ chcon -R -t httpd_var_run_t %{brokerdir}/httpd/run
 /sbin/restorecon -R -v /var/run
 /sbin/restorecon -rv /usr/lib/ruby/gems/1.8/gems/passenger-*
 /sbin/restorecon -rv %{brokerdir}/tmp
-/sbin/restorecon -v '%{_localstatedir}/log/stickshift/user_action.log'
+/sbin/restorecon -v '%{_var}/log/stickshift/user_action.log'
 
 %postun
 /usr/sbin/semodule -e passenger -r stickshift-common
