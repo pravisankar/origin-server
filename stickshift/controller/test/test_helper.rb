@@ -11,7 +11,3 @@ Rails.backtrace_cleaner.remove_silencers!
 def gen_uuid
   %x[/usr/bin/uuidgen].gsub('-', '').strip 
 end
-
-def gen_uuid
-  %x[/usr/bin/uuidgen].gsub('-', '').strip
-end

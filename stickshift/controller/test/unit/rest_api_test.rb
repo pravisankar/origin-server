@@ -16,10 +16,9 @@ class RestApiTest < ActionController::IntegrationTest
   $password = 'nopass'
   
   def setup
-    `mongo broker_test --eval 'db.auth_user.drop()'`
-    `mongo broker_test --eval 'db.auth_user.update({"user":"admin"}, {"user":"admin","password_hash":"2a8462d93a13e51387a5e607cbd1139f"}, true)'`
-    accnt = UserAccount.new(user: $user, password: $password)
-    accnt.save
+    setup_auth_service
+    create_auth_service_account($user, $password)
+
     @env=Hash.new
     @env["HTTP_ACCEPT"] = "application/json; version=1.0"
     @env["HTTP_AUTHORIZATION"] = ActionController::HttpAuthentication::Basic.encode_credentials($user, $password)

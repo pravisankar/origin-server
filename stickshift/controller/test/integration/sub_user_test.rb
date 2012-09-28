@@ -6,11 +6,9 @@ class SubUserTest < ActionDispatch::IntegrationTest
     @random = rand(1000000)
     @username = "parent#{@random}"
     @password = 'nopass'
-
-    `mongo broker_test --eval 'db.auth_user.drop()'`
-    `mongo broker_test --eval 'db.auth_user.update({"user":"admin"}, {"user":"admin","password_hash":"2a8462d93a13e51387a5e607cbd1139f"}, true)'`
-    accnt = UserAccount.new(user: @username, password: @password)
-    accnt.save
+    
+    setup_auth_service()
+    create_auth_service_account(@username, @password)
 
     @headers = Hash.new
     @headers["HTTP_ACCEPT"] = "application/json"
@@ -69,8 +67,8 @@ class SubUserTest < ActionDispatch::IntegrationTest
     assert_equal 200, status
 
     subaccount_password = "pass"
-    accnt = UserAccount.new(user: subaccount_user, password: subaccount_password)
-    accnt.save
+    create_auth_service_account(subaccount_user, subaccount_password)
+    
     @headers2 = Hash.new
     @headers2["HTTP_ACCEPT"] = "application/json"
     @headers2["HTTP_AUTHORIZATION"] = ActionController::HttpAuthentication::Basic.encode_credentials(subaccount_user, subaccount_password)
@@ -94,8 +92,8 @@ class SubUserTest < ActionDispatch::IntegrationTest
 
     user = "#{@username}xyz"
     password = "pass"
-    accnt = UserAccount.new(user: user, password: password)
-    accnt.save
+    create_auth_service_account(user, password)    
+    
     @headers2 = @headers.clone
     @headers2["HTTP_AUTHORIZATION"] = ActionController::HttpAuthentication::Basic.encode_credentials(user, password)
     get "rest/domains.json", nil, @headers2

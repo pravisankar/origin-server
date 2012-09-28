@@ -106,7 +106,7 @@ class AV10 < MV10
     estimates_list_get.response_type = "estimates" 
 
     estimates_app_get = AV10::TRestApi.new("/rest/estimates/application")
-    estimates_app_get.request.merge!({ 'id' => 'application', 'descriptor' => "--- \nName: TestApp1\nRequires: \n- php-5.4\n" })
+    estimates_app_get.request.merge!({ 'id' => 'application', 'descriptor' => "--- \nName: TestApp1\nRequires: \n- php-#{$php_version}\n" })
     estimates_app_get.response = AV10::TRestApplicationEstimate.new
     estimates_app_get.response_type = "application_estimates"
      
@@ -155,7 +155,7 @@ class AV10 < MV10
     keys_put.response_type = "key"
 
     app_post = AV10::TRestApi.new("/rest/domains/#{dom_id}/applications", "POST")
-    app_name, app_type, app_scale, app_timeout = 'app1', 'php-5.4', true, 180
+    app_name, app_type, app_scale, app_timeout = 'app1', "php-#{$php_version}", true, 180
     app_post.request.merge!({ 'name' => app_name, 'cartridge' => app_type, 'scale' => app_scale })
     app_post.request_timeout = app_timeout
     app_post.response = AV10::TRestApplication.new(app_name, app_type, dom_id, app_scale)

@@ -1,3 +1,8 @@
+require 'rubygems'
+require 'active_model'
+require 'action_pack'
+require 'action_controller'
+
 module Test
   class WebUser
     include ActiveModel::Validations

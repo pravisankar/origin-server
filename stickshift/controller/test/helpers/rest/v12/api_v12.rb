@@ -58,7 +58,7 @@ class AV12 < MV12
     keys_post.response_status = "created"
 
     app_post = AV12::TRestApi.new("/rest/domains/#{dom_id}/applications", "POST")
-    app_name, app_type, app_scale, app_timeout = 'app1', 'php-5.4', true, 180
+    app_name, app_type, app_scale, app_timeout = 'app1', "php-#{$php_version}", true, 180
     app_post.request.merge!({ 'name' => app_name, 'cartridge' => app_type, 'scale' => app_scale })
     app_post.request_timeout = app_timeout
     app_post.response = AV12::TRestApplication.new(app_name, app_type, dom_id, app_scale)
