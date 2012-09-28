@@ -15,7 +15,7 @@
 %endif
 
 %if 0%{?rhel}
-  %global appdir %{_root_localstatedir}/lib/stickshift
+  %global appdir /var/lib/stickshift
 %endif
 
 Summary:        Cloud Development Node
