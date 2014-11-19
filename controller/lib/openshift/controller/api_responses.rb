@@ -282,11 +282,12 @@ module OpenShift
 
           def log_broker_stats(request_uuid)
             if Rails.configuration.openshift[:broker_stats_enabled]
-              msg = "Request ID: #{request_uuid}, "
-              msg += "GC stat: #{GC::stat}, "
-              msg += "Count Objects: #{ObjectSpace.count_objects}, "
-              msg += "Symbol size: #{Symbol.all_symbols.size}"
-              Rails.logger.info("BROKER_STATS => #{msg}")
+              stats                            = Hash.new
+              stats[:request_id]               = request_uuid
+              stats[:gc_stat]                  = GC::stat
+              stats[:count_objects]            = ObjectSpace.count_objects
+              stats[:count_objects][:T_SYMBOL] = Symbol.all_symbols.size
+              Rails.logger.info("BROKER_STATS => #{stats.to_json}")
             end
           end
     end
